@@ -1,21 +1,8 @@
 import {
-  AlignLeft,
   Building2,
-  Eraser,
   FileType,
-  Languages,
-  Layers,
-  ListChecks,
   MessageSquare,
-  Mic,
-  Package,
   PenLine,
-  Scissors,
-  Settings,
-  Sigma,
-  SpellCheck,
-  Tags,
-  Type,
   Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -93,7 +80,21 @@ export function taskFromPath(pathname: string): TaskKey | null {
 import { PenTool, Megaphone } from "lucide-react";
 
 export const TASKS: TaskMeta[] = [
-  // ── ỨNG DỤNG (creator-side primary tasks)
+  // ── ỨNG DỤNG HÀNH CHÍNH & AI
+  {
+    key: "resolution",
+    label: "Soạn Nghị quyết & Công văn",
+    blurb: "Dàn trang chuẩn Nghị định 30/2020/NĐ-CP",
+    icon: Building2,
+    category: "rag",
+  },
+  {
+    key: "workflow",
+    label: "Workflow Builder",
+    blurb: "Kéo thả tạo quy trình tự động hóa",
+    icon: Workflow,
+    category: "rag",
+  },
   {
     key: "pr",
     label: "Báo cáo & Truyền thông",
@@ -109,158 +110,24 @@ export const TASKS: TaskMeta[] = [
     category: "rag",
   },
   {
-    key: "resolution",
-    label: "Soạn Nghị quyết",
-    blurb: "OCR ảnh & AI soạn nghị quyết (Graph RAG)",
-    icon: Building2,
-    category: "rag",
-  },
-  {
-    key: "workflow",
-    label: "Workflow Builder",
-    blurb: "Kéo thả tạo quy trình tự động hóa",
-    icon: Workflow,
-    category: "rag",
-  },
-  {
     key: "chat",
-    label: "Chat & RAG",
-    blurb: "Hỏi đáp tài liệu",
+    label: "Trợ lý Chat & RAG",
+    blurb: "Hỏi đáp tài liệu thông minh",
     icon: MessageSquare,
-    category: "rag",
-  },
-  {
-    key: "translate",
-    label: "Dịch thuật",
-    blurb: "Việt · Anh · 中 · 한 · 日, giữ định dạng",
-    icon: Languages,
-    category: "rag",
-  },
-  {
-    key: "summarize",
-    label: "Tóm tắt",
-    blurb: "ViT5-large · báo / hợp đồng / hội thoại",
-    icon: AlignLeft,
     category: "rag",
   },
   {
     key: "convert",
     label: "Chuyển định dạng",
-    blurb: "PDF / ảnh → DOCX, OCR cục bộ",
+    blurb: "PDF / Ảnh → DOCX, OCR cục bộ",
     icon: FileType,
-    category: "rag",
+    category: "text",
   },
   {
     key: "handwriting",
     label: "OCR chữ viết tay",
-    blurb: "Vintern-1B · biểu mẫu / ghi chú / CMND",
+    blurb: "Trích xuất biểu mẫu / ghi chú / CMND",
     icon: PenLine,
-    category: "rag",
-  },
-  {
-    key: "stt",
-    label: "Giọng nói → văn bản",
-    blurb: "PhoWhisper · Whisper-v3 · 3 vùng giọng",
-    icon: Mic,
-    category: "rag",
-  },
-
-  // ── CÔNG CỤ VĂN BẢN (atomic VN utilities)
-  {
-    key: "spell",
-    label: "Kiểm tra chính tả",
-    blurb: "Telex · dấu · phương ngữ · teencode",
-    icon: SpellCheck,
     category: "text",
-  },
-  {
-    key: "diacritic",
-    label: "Khôi phục dấu",
-    blurb: "Bù lại dấu cho văn bản",
-    icon: Type,
-    category: "text",
-  },
-  {
-    key: "ner",
-    label: "Trích xuất thực thể",
-    blurb: "Người · tổ chức · điều luật · CMND · ĐT",
-    icon: Tags,
-    category: "text",
-  },
-  {
-    key: "register",
-    label: "Phân loại văn phong",
-    blurb: "Trang trọng / kinh doanh / hội thoại / văn học",
-    icon: Layers,
-    category: "text",
-  },
-  {
-    key: "tokenize",
-    label: "Tách từ / câu",
-    blurb: "Tách theo từ và theo câu",
-    icon: Scissors,
-    category: "text",
-  },
-  {
-    key: "normalize",
-    label: "Chuẩn hoá",
-    blurb: "NFC và nhận diện tiếng Việt",
-    icon: Sigma,
-    category: "text",
-  },
-  {
-    key: "strip",
-    label: "Bỏ dấu",
-    blurb: "Chuyển sang ASCII",
-    icon: Eraser,
-    category: "text",
-  },
-
-  // ── HỆ THỐNG (operations, compliance, management, reference)
-  {
-    key: "jobs",
-    label: "Hàng đợi xử lý",
-    blurb: "Theo dõi tác vụ chạy nền + tiến độ",
-    icon: ListChecks,
-    category: "dev",
-  },
-  /*
-  {
-    key: "compliance",
-    label: "Phân loại rủi ro",
-    blurb: "Luật 134/2025 — 3 mức",
-    icon: ShieldCheck,
-    category: "dev",
-  },
-  {
-    key: "admin",
-    label: "Quản trị doanh nghiệp",
-    blurb: "Giấy phép · audit · người dùng",
-    icon: Building2,
-    category: "dev",
-  },
-  */
-  {
-    key: "models",
-    label: "Mô hình",
-    blurb: "Quản lý mô hình AI cài đặt cục bộ",
-    icon: Package,
-    category: "dev",
-  },
-  /*
-  {
-    key: "api",
-    label: "API và cài đặt",
-    blurb: "Hướng dẫn chạy và ví dụ cURL",
-    icon: Code2,
-    category: "dev",
-  },
-  */
-  {
-    key: "settings",
-    label: "Cài đặt",
-    blurb: "Trạng thái máy chủ và xác thực",
-    icon: Settings,
-    category: "dev",
   },
 ];
