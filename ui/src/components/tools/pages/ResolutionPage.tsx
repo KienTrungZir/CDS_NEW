@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Upload, Save, Loader2, FileDown, FolderOpen, Trash2, GripVertical, Plus, 
   Table as TableIcon, Minus, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  Eye, EyeOff, FileCode, Copy, Download, Code, ChevronUp, ChevronDown
+  Eye, EyeOff, FileCode, Copy, Download, ChevronUp, ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -500,14 +500,14 @@ export function ResolutionPage() {
                       {(block.type === 'paragraph' || block.type === 'title' || block.type === 'list_item') && (
                         <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md">
                           <Button 
-                            variant={block.bold ? "secondary" : "ghost"} 
+                            variant={block.bold ? "outline" : "ghost"} 
                             size="icon" className="h-6 w-6 p-0" 
                             onClick={() => updateBlock(i, 'bold', !block.bold)}
                           >
                             <Bold className="w-3 h-3" />
                           </Button>
                           <Button 
-                            variant={block.italic ? "secondary" : "ghost"} 
+                            variant={block.italic ? "outline" : "ghost"} 
                             size="icon" className="h-6 w-6 p-0" 
                             onClick={() => updateBlock(i, 'italic', !block.italic)}
                           >
@@ -517,28 +517,28 @@ export function ResolutionPage() {
                           <div className="h-3 w-px bg-border mx-1" />
 
                           <Button 
-                            variant={(block.align || "left") === "left" ? "secondary" : "ghost"} 
+                            variant={(block.align || "left") === "left" ? "outline" : "ghost"} 
                             size="icon" className="h-6 w-6 p-0" 
                             onClick={() => updateBlock(i, 'align', 'left')}
                           >
                             <AlignLeft className="w-3 h-3" />
                           </Button>
                           <Button 
-                            variant={block.align === "center" ? "secondary" : "ghost"} 
+                            variant={block.align === "center" ? "outline" : "ghost"} 
                             size="icon" className="h-6 w-6 p-0" 
                             onClick={() => updateBlock(i, 'align', 'center')}
                           >
                             <AlignCenter className="w-3 h-3" />
                           </Button>
                           <Button 
-                            variant={block.align === "right" ? "secondary" : "ghost"} 
+                            variant={block.align === "right" ? "outline" : "ghost"} 
                             size="icon" className="h-6 w-6 p-0" 
                             onClick={() => updateBlock(i, 'align', 'right')}
                           >
                             <AlignRight className="w-3 h-3" />
                           </Button>
                           <Button 
-                            variant={block.align === "justify" ? "secondary" : "ghost"} 
+                            variant={block.align === "justify" ? "outline" : "ghost"} 
                             size="icon" className="h-6 w-6 p-0" 
                             onClick={() => updateBlock(i, 'align', 'justify')}
                           >

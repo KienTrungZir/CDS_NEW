@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -9,20 +9,20 @@ import {
   Background,
   Handle,
   Position,
-  NodeProps,
   Connection,
-  Edge
+  Edge,
+  Node
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Upload, Play, FileDown, Cpu, FileText, FileUp, Trash2 } from 'lucide-react';
+import { Play, FileDown, Cpu, FileText, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 // --- CUSTOM NODES ---
 
-const InputNode = ({ data, id }: NodeProps) => {
+const InputNode = ({ data, id }: any) => {
   return (
     <div className="glass-card w-80 rounded-xl overflow-hidden shadow-lg border-l-4 border-l-blue-500">
       <div className="bg-blue-500/10 p-3 font-semibold flex items-center gap-2">
@@ -110,7 +110,7 @@ const InputNode = ({ data, id }: NodeProps) => {
   );
 };
 
-const AINode = ({ data, id }: NodeProps) => {
+const AINode = ({ data, id }: any) => {
   return (
     <div className="glass-card w-80 rounded-xl overflow-hidden shadow-lg border-l-4 border-l-purple-500">
       <Handle type="target" position={Position.Left} className="w-3 h-3 bg-purple-500" />
@@ -138,7 +138,7 @@ const AINode = ({ data, id }: NodeProps) => {
   );
 };
 
-const ExportNode = ({ data, id }: NodeProps) => {
+const ExportNode = ({ data }: any) => {
   return (
     <div className="glass-card w-80 rounded-xl overflow-hidden shadow-lg border-l-4 border-l-green-500">
       <Handle type="target" position={Position.Left} className="w-3 h-3 bg-green-500" />
@@ -169,13 +169,13 @@ const nodeTypes = {
   exportNode: ExportNode,
 };
 
-const initialNodes = [
+const initialNodes: Node[] = [
   { id: '1', type: 'inputNode', position: { x: 50, y: 150 }, data: { text: '', selectedTemplate: '' } },
   { id: '2', type: 'aiNode', position: { x: 450, y: 150 }, data: { prompt: '' } },
   { id: '3', type: 'exportNode', position: { x: 850, y: 150 }, data: {} },
 ];
 
-const initialEdges = [
+const initialEdges: Edge[] = [
   { id: 'e1-2', source: '1', target: '2', animated: true },
   { id: 'e2-3', source: '2', target: '3', animated: true },
 ];
@@ -271,8 +271,8 @@ const WorkflowEditor = () => {
     setNodeLoading('2', true);
     let aiResult = null;
     try {
-      const payload = { prompt: combinedPrompt };
-      if (inputNode.data.selectedTemplate) {
+      const payload: any = { prompt: combinedPrompt };
+      if (inputNode?.data.selectedTemplate) {
         payload.template = inputNode.data.selectedTemplate;
       }
       

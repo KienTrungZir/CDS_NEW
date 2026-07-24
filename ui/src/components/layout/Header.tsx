@@ -1,4 +1,4 @@
-import { Cpu, Settings as SettingsIcon, BookOpen } from "lucide-react";
+import { Cpu, Settings as SettingsIcon } from "lucide-react";
 
 // Top bar — brand mark, tagline, runtime context (model name), top-right
 // shortcuts (settings + API docs). The chữ Nôm 喃 is the project's
@@ -23,7 +23,6 @@ export function Header({
   version,
   onHome,
   onSettings,
-  onApi,
   reserveRightOnMobile,
 }: HeaderProps) {
   // Reserve 40px on the right whenever AppShell floats the studio toggle

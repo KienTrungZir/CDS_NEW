@@ -1,7 +1,6 @@
 import {
   AlignLeft,
   Building2,
-  Code2,
   Eraser,
   FileType,
   Languages,
@@ -13,7 +12,6 @@ import {
   PenLine,
   Scissors,
   Settings,
-  ShieldCheck,
   Sigma,
   SpellCheck,
   Tags,
