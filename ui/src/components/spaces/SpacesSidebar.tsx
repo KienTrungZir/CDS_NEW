@@ -139,10 +139,10 @@ function SpaceItem({
   onDelete: (e: React.MouseEvent) => void;
 }) {
   return (
-    <button
+    <div
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-center gap-2 border-l-2 py-1.5 pl-2.5 pr-2 text-left transition-colors",
+        "group flex w-full cursor-pointer items-center gap-2 border-l-2 py-1.5 pl-2.5 pr-2 text-left transition-colors select-none",
         active ? "border-l-accent bg-accent-wash" : "border-l-transparent hover:bg-bg-soft",
       )}
     >
@@ -159,13 +159,14 @@ function SpaceItem({
         <div className="meta truncate">{space.n_materials} tài liệu</div>
       </div>
       <button
+        type="button"
         onClick={onDelete}
         className="p-1 text-ink-mute opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
         aria-label="Xoá không gian"
       >
         <Trash2 size={12} />
       </button>
-    </button>
+    </div>
   );
 }
 
