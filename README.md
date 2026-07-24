@@ -1,17 +1,23 @@
-# Nôm 喃
+# Nôm 喃 (Customized version by @KienTrungZir)
 
 **Open-source Python toolkit for building Vietnamese AI applications.**
-
-> Named after *chữ Nôm* — the script Vietnam wrote in for a millennium.
+> *Customized by @KienTrungZir for the AI Administrative Document (Chuyển đổi số văn bản hành chính) project. Includes new Drag & Drop document builder UI, JSON structure strictly adhering to Decree 30/2020/NĐ-CP, and automated Word template exporting.*
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/nrl-ai/nom-vn/blob/main/LICENSE)
 [![Status](https://img.shields.io/badge/status-v0.2.33-orange)](https://github.com/nrl-ai/nom-vn/blob/main/CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
-[![Tests](https://img.shields.io/badge/tests-406%20passing-brightgreen)](https://github.com/nrl-ai/nom-vn/tree/main/tests)
 
 A local-first toolkit. **No data leaves your machine.** Use any LLM (Ollama by default), any embedder, any document type — Nôm wires them into a Vietnamese-aware RAG pipeline you can ship as either a Python library or a deployable chat web app.
 
 **Every default is benched on real Vietnamese data.** Where a public Apache/MIT model beats a multilingual one, we use it. See [docs/benchmark.md](https://github.com/nrl-ai/nom-vn/blob/main/docs/benchmark.md) for the receipts.
+
+---
+
+## 🚀 What's New in this Custom Version (@KienTrungZir)
+- **Side-by-Side Document Editor**: Interactive React drag & drop interface for drafting administrative documents.
+- **Decree 30/2020/NĐ-CP Compliance**: Strict Pydantic models and UI schemas matching the Vietnamese government's formatting standards.
+- **Dynamic Word Generation**: Auto-generates fully formatted `.docx` files adhering to the legal margins, fonts, and layout structures.
+- **JSON Converter**: Endpoints built in FastAPI to translate raw text -> JSON Decree 30 -> Docx.
 
 ---
 
