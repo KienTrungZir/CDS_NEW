@@ -17,7 +17,7 @@ import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Play, FileDown, Cpu, FileText, FileUp } from 'lucide-react';
+import { Play, FileDown, Cpu, FileText, FileUp, FileCode, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 // --- CUSTOM NODES ---
@@ -39,7 +39,7 @@ const InputNode = ({ data, id }: any) => {
               value={data.selectedTemplate || ""}
               onChange={(e) => data.updateNodeData(id, { selectedTemplate: e.target.value })}
             >
-              <option value="" className="bg-background text-foreground">-- Tự động dàn trang --</option>
+              <option value="" className="bg-background text-foreground">-- Chuẩn NĐ 30/2020/NĐ-CP (Tự động dàn trang) --</option>
               {data.templates?.map((t: any) => (
                 <option key={t.filename} value={t.filename} className="bg-background text-foreground">{t.name}</option>
               ))}
@@ -128,8 +128,23 @@ const AINode = ({ data, id }: any) => {
         />
         {data.loading && <div className="text-xs text-purple-500 animate-pulse text-center">Đang suy nghĩ...</div>}
         {data.result && (
-          <div className="text-xs bg-muted/50 p-2 rounded max-h-24 overflow-y-auto">
-            <pre>{JSON.stringify(data.result, null, 2)}</pre>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] text-emerald-400 font-semibold">✓ Cấu trúc NĐ 30 Sẵn sàng</span>
+              {(data.result.nd30_data || data.result.header) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => data.onOpenNd30Modal?.(data.result)} 
+                  className="h-6 text-[10px] border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 px-2"
+                >
+                  <FileCode className="w-3 h-3 mr-1" /> JSON NĐ 30
+                </Button>
+              )}
+            </div>
+            <div className="text-xs bg-muted/50 p-2 rounded max-h-24 overflow-y-auto font-mono text-[10px]">
+              <pre>{JSON.stringify(data.result, null, 2)}</pre>
+            </div>
           </div>
         )}
       </div>
@@ -148,11 +163,26 @@ const ExportNode = ({ data }: any) => {
       <div className="p-4 space-y-3">
         <div className="text-xs text-muted-foreground">Tạo file .docx dựa trên cấu trúc blocks.</div>
         {data.downloadUrl ? (
-          <Button className="w-full bg-green-600 hover:bg-green-700 text-white" asChild>
-            <a href={data.downloadUrl} download="VanBan_TuDong.docx">
-              <FileDown className="w-4 h-4 mr-2" /> Tải xuống Word
-            </a>
-          </Button>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-[10px] text-emerald-400 font-medium">
+              <span>✓ Đã dàn trang NĐ 30</span>
+              {data.result && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => data.onOpenNd30Modal?.(data.result)} 
+                  className="h-6 text-[10px] border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 px-2"
+                >
+                  <FileCode className="w-3 h-3 mr-1" /> JSON NĐ 30
+                </Button>
+              )}
+            </div>
+            <Button className="w-full bg-green-600 hover:bg-green-700 text-white" asChild>
+              <a href={data.downloadUrl} download="VanBan_TuDong.docx">
+                <FileDown className="w-4 h-4 mr-2" /> Tải xuống Word (NĐ 30)
+              </a>
+            </Button>
+          </div>
         ) : (
           <Button variant="outline" className="w-full" disabled>
             Chưa có dữ liệu
@@ -187,6 +217,37 @@ const WorkflowEditor = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isRunning, setIsRunning] = useState(false);
   const [templates, setTemplates] = useState([]);
+  
+  const [nd30ModalData, setNd30ModalData] = useState<any | null>(null);
+  const [showNd30Modal, setShowNd30Modal] = useState(false);
+
+  const handleOpenNd30Modal = (dataObj: any) => {
+    if (!dataObj) return;
+    const targetData = dataObj.nd30_data || (dataObj.header ? dataObj : null);
+    if (targetData) {
+      setNd30ModalData(targetData);
+      setShowNd30Modal(true);
+    } else {
+      toast.error("Chưa có dữ liệu chuẩn Nghị định 30!");
+    }
+  };
+
+  const handleCopyJson = () => {
+    if (!nd30ModalData) return;
+    navigator.clipboard.writeText(JSON.stringify(nd30ModalData, null, 2));
+    toast.success("Đã sao chép JSON NĐ 30 vào clipboard!");
+  };
+
+  const handleDownloadJson = () => {
+    if (!nd30ModalData) return;
+    const blob = new Blob([JSON.stringify(nd30ModalData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "CongVan_NghiDinh30.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const loadTemplates = useCallback(async () => {
     try {
@@ -241,7 +302,8 @@ const WorkflowEditor = () => {
       data: {
         ...node.data,
         updateNodeData,
-        setNodeLoading
+        setNodeLoading,
+        onOpenNd30Modal: handleOpenNd30Modal
       }
     };
   });
@@ -302,7 +364,7 @@ const WorkflowEditor = () => {
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const objUrl = window.URL.createObjectURL(blob);
-      updateNodeData('3', { downloadUrl: objUrl, loading: false });
+      updateNodeData('3', { downloadUrl: objUrl, result: aiResult, loading: false });
       toast.success("Workflow chạy thành công!");
     } catch (err) {
       toast.error("Lỗi tại Export Node");
@@ -345,6 +407,34 @@ const WorkflowEditor = () => {
           <Controls />
         </ReactFlow>
       </div>
+
+      {showNd30Modal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-4 border-b flex justify-between items-center bg-muted/40">
+              <div className="flex items-center gap-2">
+                <FileCode className="w-5 h-5 text-emerald-500" />
+                <h3 className="font-bold text-base">Cấu trúc JSON Chuẩn Nghị định 30/2020/NĐ-CP</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleCopyJson}>
+                  <Copy className="w-3.5 h-3.5 mr-1" /> Sao chép
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDownloadJson}>
+                  <Download className="w-3.5 h-3.5 mr-1" /> Tải file JSON
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowNd30Modal(false)}>
+                  Đóng
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex-1 p-4 overflow-auto bg-slate-950 font-mono text-xs text-emerald-400 leading-relaxed">
+              <pre>{JSON.stringify(nd30ModalData, null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
