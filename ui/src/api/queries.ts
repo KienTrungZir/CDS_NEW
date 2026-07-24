@@ -198,6 +198,12 @@ export function useClassifyRegister() {
   });
 }
 
+export function useLlmComplete() {
+  return useMutation({
+    mutationFn: (prompt: string) => api.tools.llmComplete(prompt),
+  });
+}
+
 export function useOcrHandwriting() {
   return useMutation({
     mutationFn: (vars: { file: File; modelId?: string }) =>

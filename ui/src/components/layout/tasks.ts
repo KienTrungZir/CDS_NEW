@@ -18,12 +18,10 @@ import {
   SpellCheck,
   Tags,
   Type,
+  Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-// NLP analysis (NER / sentiment / language detection) is exposed via
-// the API today (`/api/tools/nlp/*`); UI pages for these will land in
-// a follow-up — see plan.md Wave 6.
 export type TaskKey =
   | "chat"
   | "diacritic"
@@ -44,7 +42,11 @@ export type TaskKey =
   | "compliance"
   | "admin"
   | "api"
-  | "settings";
+  | "settings"
+  | "resolution"
+  | "workflow"
+  | "pr"
+  | "sentiment";
 
 export interface TaskMeta {
   key: TaskKey;
@@ -54,14 +56,6 @@ export interface TaskMeta {
   category: "rag" | "text" | "dev";
 }
 
-// Per-task URL slug. Each tab gets its own browser URL so deep-links
-// (e.g. https://nom-vn.nrl.ai/translate) work, back/forward navigates
-// between tabs, and bookmarking lands you on the same screen.
-//
-// Slugs are kept in English so the same paths work after localization
-// (a Spanish or Japanese build of the UI swaps labels, not URLs).
-// "api" would collide with the /api/* HTTP namespace, so the docs page
-// gets "/api-docs" instead.
 export const TASK_SLUGS: Record<TaskKey, string> = {
   chat: "/",
   translate: "/translate",
@@ -83,6 +77,10 @@ export const TASK_SLUGS: Record<TaskKey, string> = {
   admin: "/admin",
   api: "/api-docs",
   settings: "/settings",
+  resolution: "/resolution",
+  workflow: "/workflow",
+  pr: "/pr",
+  sentiment: "/sentiment",
 };
 
 export const SLUG_TO_TASK: Record<string, TaskKey> = Object.fromEntries(
@@ -90,21 +88,42 @@ export const SLUG_TO_TASK: Record<string, TaskKey> = Object.fromEntries(
 ) as Record<string, TaskKey>;
 
 export function taskFromPath(pathname: string): TaskKey | null {
-  // Normalize trailing slash; only "/" maps to chat.
   const cleaned = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
   return SLUG_TO_TASK[cleaned] ?? null;
 }
 
-// `agents` is currently hidden from the nav (no UI page yet) but the slug,
-// TaskKey, and route handling stay so existing deep-links keep working.
-//
-// Order within each category is intentional — items the user reaches for
-// daily come first; specialty / advanced ones come last. Categories:
-//   rag  → "Ứng dụng" (creator-side primary tasks)
-//   text → "Công cụ văn bản" (atomic VN text utilities)
-//   dev  → "Hệ thống" (operations + management + reference)
+import { PenTool, Megaphone } from "lucide-react";
+
 export const TASKS: TaskMeta[] = [
   // ── ỨNG DỤNG (creator-side primary tasks)
+  {
+    key: "pr",
+    label: "Báo cáo & Truyền thông",
+    blurb: "Viết tin từ ảnh chụp sự kiện",
+    icon: Megaphone,
+    category: "rag",
+  },
+  {
+    key: "sentiment",
+    label: "Phân tích dư luận",
+    blurb: "Đọc & tóm tắt ý kiến nhân dân",
+    icon: PenTool,
+    category: "rag",
+  },
+  {
+    key: "resolution",
+    label: "Soạn Nghị quyết",
+    blurb: "OCR ảnh & AI soạn nghị quyết (Graph RAG)",
+    icon: Building2,
+    category: "rag",
+  },
+  {
+    key: "workflow",
+    label: "Workflow Builder",
+    blurb: "Kéo thả tạo quy trình tự động hóa",
+    icon: Workflow,
+    category: "rag",
+  },
   {
     key: "chat",
     label: "Chat & RAG",
@@ -207,6 +226,7 @@ export const TASKS: TaskMeta[] = [
     icon: ListChecks,
     category: "dev",
   },
+  /*
   {
     key: "compliance",
     label: "Phân loại rủi ro",
@@ -221,6 +241,7 @@ export const TASKS: TaskMeta[] = [
     icon: Building2,
     category: "dev",
   },
+  */
   {
     key: "models",
     label: "Mô hình",
@@ -228,6 +249,7 @@ export const TASKS: TaskMeta[] = [
     icon: Package,
     category: "dev",
   },
+  /*
   {
     key: "api",
     label: "API và cài đặt",
@@ -235,6 +257,7 @@ export const TASKS: TaskMeta[] = [
     icon: Code2,
     category: "dev",
   },
+  */
   {
     key: "settings",
     label: "Cài đặt",

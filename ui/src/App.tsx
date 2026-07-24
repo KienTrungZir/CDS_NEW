@@ -26,6 +26,10 @@ import { CompliancePage } from "@/components/tools/pages/CompliancePage";
 import { AdminPage } from "@/components/tools/pages/AdminPage";
 import { ApiPage } from "@/components/tools/pages/ApiPage";
 import { SettingsPage } from "@/components/tools/pages/SettingsPage";
+import { ResolutionPage } from "@/components/tools/pages/ResolutionPage";
+import { WorkflowPage } from "@/components/tools/pages/WorkflowPage";
+import { PrArticlePage } from "@/components/tools/pages/PrArticlePage";
+import { SentimentPage } from "@/components/tools/pages/SentimentPage";
 import { useHealth, useSpaces } from "@/api/queries";
 
 const ACTIVE_SPACE_KEY = "nom:active-space";
@@ -46,12 +50,14 @@ const TASK_KEYS: ReadonlySet<TaskKey> = new Set([
   "admin",
   "api",
   "settings",
+  "workflow",
+  "pr",
+  "sentiment"
 ]);
 
 import { TASK_SLUGS, taskFromPath } from "@/components/layout/tasks";
 
 function loadTask(): TaskKey {
-  // URL takes precedence over localStorage so deep-links work cleanly.
   if (typeof window !== "undefined") {
     const fromUrl = taskFromPath(window.location.pathname);
     if (fromUrl) return fromUrl;
@@ -60,7 +66,6 @@ function loadTask(): TaskKey {
     const raw = localStorage.getItem(ACTIVE_TASK_KEY);
     if (raw && TASK_KEYS.has(raw as TaskKey)) return raw as TaskKey;
   } catch {
-    /* ignore */
   }
   return "chat";
 }
@@ -68,8 +73,6 @@ function loadTask(): TaskKey {
 export default function App() {
   const [activeTask, setActiveTaskRaw] = useState<TaskKey>(loadTask);
 
-  // Wrap setActiveTask so every state change also pushes a history
-  // entry. URL stays in lockstep with the active tab.
   const setActiveTask = (next: TaskKey): void => {
     const slug = TASK_SLUGS[next];
     if (typeof window !== "undefined" && window.location.pathname !== slug) {
@@ -78,7 +81,6 @@ export default function App() {
     setActiveTaskRaw(next);
   };
 
-  // Browser back / forward → derive task from new URL.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onPop = () => {
@@ -88,31 +90,25 @@ export default function App() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+  
   const [storedSpaceId, setStoredSpaceId] = useState<string | null>(() => {
     return localStorage.getItem(ACTIVE_SPACE_KEY);
   });
   const spacesQ = useSpaces();
   const healthQ = useHealth();
 
-  // Persist active task across reloads.
   useEffect(() => {
     try {
       localStorage.setItem(ACTIVE_TASK_KEY, activeTask);
     } catch {
-      /* ignore */
     }
   }, [activeTask]);
 
-  // Persist active space across reloads.
   useEffect(() => {
     if (storedSpaceId) localStorage.setItem(ACTIVE_SPACE_KEY, storedSpaceId);
     else localStorage.removeItem(ACTIVE_SPACE_KEY);
   }, [storedSpaceId]);
 
-  // Validated active space — null until spacesQ confirms the stored id
-  // still exists. Children receive null during the brief window before
-  // spaces load, so they don't fire requests against a stale id and
-  // generate a 404 in the console.
   const activeSpaceId = useMemo(() => {
     if (!storedSpaceId) return null;
     if (!spacesQ.data) return null;
@@ -137,9 +133,6 @@ export default function App() {
   );
 
   const hasMaterials = (activeSpace?.n_materials ?? 0) > 0;
-
-  // Chat is the only stateful task — its layout adds a right-side
-  // materials studio pane. Tools render full-bleed in the center.
   const isChat = activeTask === "chat";
 
   let centerPane: React.ReactNode;
@@ -209,6 +202,18 @@ export default function App() {
       break;
     case "settings":
       centerPane = <SettingsPage />;
+      break;
+    case "resolution":
+      centerPane = <ResolutionPage />;
+      break;
+    case "workflow":
+      centerPane = <WorkflowPage />;
+      break;
+    case "pr":
+      centerPane = <PrArticlePage />;
+      break;
+    case "sentiment":
+      centerPane = <SentimentPage />;
       break;
   }
 

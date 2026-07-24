@@ -98,8 +98,23 @@ class LexiconSentimentModel:
 
     def predict(self, text: str) -> SentimentResult:
         lo = text.lower()
-        pos = sum(1 for w in self.positive if w in lo)
-        neg = sum(1 for w in self.negative if w in lo)
+        negators = ["không ", "chẳng ", "chưa ", "ko ", "kg ", "k ", "chả ", "đéo "]
+        
+        pos = 0
+        neg = 0
+        
+        for w in self.positive:
+            count = lo.count(w)
+            negated_count = sum(lo.count(n + w) for n in negators)
+            pos += count - negated_count
+            neg += negated_count
+            
+        for w in self.negative:
+            count = lo.count(w)
+            negated_count = sum(lo.count(n + w) for n in negators)
+            neg += count - negated_count
+            pos += negated_count
+
         total = pos + neg
         if total == 0:
             return SentimentResult(SentimentLabel.NEUTRAL, score=0.5)

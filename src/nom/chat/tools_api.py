@@ -789,6 +789,31 @@ def register_tool_routes(app: FastAPI, *, llm: LLM | None = None) -> None:
             ),
         }
 
+    @app.post("/api/tools/llm/complete")
+    def llm_complete(payload: dict[str, Any]) -> dict[str, Any]:
+        prompt = str(payload.get("prompt", ""))
+        if not prompt:
+            raise HTTPException(status_code=422, detail="`prompt` is required")
+        if llm is None:
+            raise HTTPException(
+                status_code=503,
+                detail="LLM backend unavailable (server started without an LLM)",
+            )
+        try:
+            # We bypass the complex chat logic and just ask the LLM
+            response = llm.complete(prompt)
+        except Exception as exc:
+            cls = type(exc).__name__
+            if "HTTPStatusError" in cls or "ConnectError" in cls or "Timeout" in cls:
+                from nom.chat.server import _llm_error_to_503
+                raise _llm_error_to_503(exc) from exc
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return {
+            "prompt": prompt,
+            "response": response,
+            "model": getattr(llm, "name", "unknown")
+        }
+
     @app.post("/api/tools/ocr/handwriting")
     async def ocr_handwriting(
         file: Annotated[UploadFile, File()],
@@ -796,14 +821,6 @@ def register_tool_routes(app: FastAPI, *, llm: LLM | None = None) -> None:
     ) -> dict[str, Any]:
         """OCR a handwritten / form / ID-card image via the Vintern VLM
         wrapper. Returns the full-page transcript as text.
-
-        The 60-px short-edge guard inside the wrapper rejects line-crop
-        inputs (VLMs hallucinate on tight crops — see
-        ``docs/sota_vn_2026q2_expansion.md``). Pass full pages.
-
-        503 when transformers / torch are missing or when the model
-        download fails. The wrapper rejects sub-60-px short-edge inputs
-        with 422 (clear "pass full page" hint).
         """
         from pathlib import Path
 

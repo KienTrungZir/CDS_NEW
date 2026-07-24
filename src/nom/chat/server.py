@@ -129,6 +129,10 @@ def build_app(
 
     register_jobs_routes(app, llm=getattr(store, "_llm", None))
 
+    # /api/resolution/* — custom Resolution generator API
+    from nom.resolution.router import router as resolution_router
+    app.include_router(resolution_router)
+
     # Pre-warm the chat LLM in a background thread so the first user-
     # facing request doesn't pay 5-10s of model load (Ollama's first call
     # after server start). Safe to fire-and-forget — failure here just

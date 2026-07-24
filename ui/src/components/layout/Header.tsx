@@ -40,11 +40,16 @@ export function Header({
         title="Về trang chủ"
         aria-label="Trang chủ"
       >
-        <h1 className="font-display text-xl font-bold leading-none tracking-tight text-ink transition-colors group-hover:text-accent">
-          Nôm <span className="font-serif font-normal text-accent">喃</span>
-        </h1>
-        <span className="section-mark hidden transition-colors group-hover:text-ink sm:inline">
-          công cụ ai tiếng việt
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-blue-500 shadow-glow">
+            <span className="font-display font-bold text-white">C</span>
+          </div>
+          <h1 className="font-display text-2xl font-black leading-none tracking-tight text-ink transition-colors group-hover:text-accent">
+            CDS
+          </h1>
+        </div>
+        <span className="section-mark hidden text-xs font-semibold uppercase tracking-widest transition-colors group-hover:text-ink sm:inline">
+          Hệ thống Chuyển Đổi Số
         </span>
       </button>
       <div className="flex items-center gap-2 text-xs">
@@ -55,6 +60,7 @@ export function Header({
           </span>
         )}
         {version && <span className="meta hidden sm:inline">v{version}</span>}
+        {/*
         {onApi && (
           <button
             type="button"
@@ -66,6 +72,7 @@ export function Header({
             <BookOpen size={14} />
           </button>
         )}
+        */}
         {onSettings && (
           <button
             type="button"

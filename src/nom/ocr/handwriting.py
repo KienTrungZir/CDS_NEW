@@ -104,14 +104,20 @@ class VinternHandwritingOcr:
                 "(brings transformers + torch + torchvision + timm + pillow)."
             ) from exc
 
-        device = self.device
-        if device is None:
-            try:
-                import torch
+        import os
+        import torch
 
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            except ImportError:
-                device = "cpu"
+        device = self.device
+        if device is None or not torch.cuda.is_available():
+            device = "cpu"
+        if device == "cpu" and os.cpu_count():
+            torch.set_num_threads(min(os.cpu_count(), 16))
+
+        if device != "cpu" and torch.cuda.is_available():
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        else:
+            # float16 on CPU halves memory (~0.9GB vs ~1.8GB float32)
+            dtype = torch.float16
 
         # Vintern uses `trust_remote_code=True` — its model class lives in
         # the repo, not in transformers core. This matches their HF card.
@@ -119,18 +125,11 @@ class VinternHandwritingOcr:
         model = AutoModel.from_pretrained(
             self.model_id,
             trust_remote_code=True,
+            torch_dtype=dtype,
+            low_cpu_mem_usage=True,
         )
         if device != "cpu":
-            try:
-                import torch
-
-                # bf16 if available, else fp16 — saves ~2x VRAM vs fp32.
-                if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
-                    model = model.to(device=device, dtype=torch.bfloat16)
-                else:
-                    model = model.to(device=device, dtype=torch.float16)
-            except ImportError:
-                model = model.to(device=device)
+            model = model.to(device=device)
         model.eval()
         self._model = model
         self._tokenizer = tokenizer
@@ -191,6 +190,7 @@ class VinternHandwritingOcr:
             generation_config={
                 "max_new_tokens": self.max_new_tokens,
                 "do_sample": False,
+                "repetition_penalty": 1.25,
             },
         )
         # `chat` returns a str on some forks, (str, history) tuple on others.

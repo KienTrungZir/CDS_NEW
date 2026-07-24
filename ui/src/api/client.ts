@@ -233,6 +233,11 @@ export const api = {
           ...(modelId ? { model_id: modelId } : {}),
         }),
       }),
+    llmComplete: (prompt: string) =>
+      request<{ prompt: string; response: string; model: string }>("/api/tools/llm/complete", {
+        method: "POST",
+        body: JSON.stringify({ prompt }),
+      }),
     ocrHandwriting: (file: File, modelId?: string) => {
       const fd = new FormData();
       fd.append("file", file);
