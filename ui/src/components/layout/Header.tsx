@@ -48,7 +48,7 @@ export function Header({
           </h1>
         </div>
         <span className="section-mark hidden text-xs font-semibold uppercase tracking-widest transition-colors group-hover:text-ink sm:inline">
-          Hệ thống Chuyển Đổi Số
+          Hệ Thống Chuyển Đổi Số Văn Bản Hành Chính (NĐ 30/2020/NĐ-CP)
         </span>
       </button>
       <div className="flex items-center gap-2 text-xs">

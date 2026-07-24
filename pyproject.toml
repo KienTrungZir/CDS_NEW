@@ -3,17 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "nom-vn"
+name = "cds-admin-document"
 version = "0.3.0a1"
-description = "Open-source Python toolkit for building Vietnamese AI applications."
+description = "Hệ thống Chuyển đổi số Văn bản Hành chính chuẩn Nghị định 30/2020/NĐ-CP."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [
-  { name = "Viet-Anh Nguyen", email = "contact@nrl.ai" },
-  { name = "Neural Research Lab" },
+  { name = "KienTrungZir" },
 ]
-keywords = ["vietnamese", "nlp", "ocr", "llm", "ai", "nôm", "tiếng việt"]
+keywords = ["chuyển đổi số", "nghị định 30", "văn bản hành chính", "ocr", "llm", "ai", "tiếng việt"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -228,10 +227,10 @@ nom = "nom.chat.cli:main"
 nom-app = "nom.desktop.main:main"
 
 [project.urls]
-Homepage = "https://nrl.ai/nom"
-Repository = "https://github.com/nrl-ai/nom-vn"
-Documentation = "https://nrl.ai/nom"
-Issues = "https://github.com/nrl-ai/nom-vn/issues"
+Homepage = "https://github.com/KienTrungZir/CDS2"
+Repository = "https://github.com/KienTrungZir/CDS2"
+Documentation = "https://github.com/KienTrungZir/CDS2"
+Issues = "https://github.com/KienTrungZir/CDS2/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nom"]
