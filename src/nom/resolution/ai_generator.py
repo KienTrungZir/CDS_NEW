@@ -127,38 +127,37 @@ TUYỆT ĐỐI CHỈ TRẢ VỀ JSON HỢP LỆ THEO SCHEMA, KHÔNG BÌNH LUẬN
         return res_data
 
     def _smart_rule_fallback(self, raw_text: str) -> dict:
-        """Intelligent rule-based parser fallback if LLM times out or fails."""
         text = _clean_ocr_text(raw_text)
         lines = [line.strip() for line in text.split("\n") if line.strip()]
         blocks = []
         
-        header_left = []
-        header_right = []
-        body_lines = []
+        header_left, header_right, body_lines = [], [], []
+        header_keywords = ["UBND", "ỦY BÀN", "BỘ", "SỞ", "CÔNG TY", "HỘI ĐỒNG", "TRƯỜNG", "BAN", "ĐƠN VỊ", "CHI NHÁNH", "CỤC", "CHÍNH PHỦ", "VĂN PHÒNG"]
         
         for idx, line in enumerate(lines):
             line_u = line.upper()
-            if any(kw in line_u for kw in ["BẢN TƯỜNG TRÌNH", "NGHỊ QUYẾT", "QUYẾT ĐỊNH", "THÔNG BÁO", "BÁO CÁO", "TỜ TRÌNH", "ĐƠN XIN"]):
+            if any(kw in line_u for kw in ["BẢN TƯỜNG TRÌNH", "NGHỊ QUYẾT", "QUYẾT ĐỊNH", "THÔNG BÁO", "BÁO CÁO", "TỜ TRÌNH", "ĐƠN XIN", "ĐƠN NGHỊ ĐỊNH"]):
                 body_lines.extend(lines[idx:])
                 break
-            elif idx < 6 and any(kw in line_u for kw in ["CỘNG HÒA", "ĐỘC LẬP", "HẠNH PHÚC", "VIỆT NAM"]):
+            elif any(kw in line_u for kw in ["CỘNG HÒA", "ĐỘC LẬP", "HẠNH PHÚC", "VIỆT NAM"]):
                 header_right.append(line)
-            elif idx < 2:
+            elif any(kw in line_u for kw in header_keywords):
                 header_left.append(line)
             else:
                 body_lines.append(line)
                 
-        if header_left or header_right:
-            blocks.append({
-                "type": "header_split",
-                "left": "\n".join(header_left) if header_left else "LUẬT THÀNH CÔNG",
-                "right": "\n".join(header_right) if header_right else "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc"
-            })
+        blocks.append({
+            "type": "header_split",
+            "left": "\n".join(header_left) if header_left else "CƠ QUAN / ĐƠN VỊ",
+            "right": "\n".join(header_right) if header_right else "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc"
+        })
             
+        has_title = False
         for line in body_lines:
             line_u = line.upper()
             if any(kw in line_u for kw in ["BẢN TƯỜNG TRÌNH", "NGHỊ QUYẾT", "QUYẾT ĐỊNH", "THÔNG BÁO", "BÁO CÁO", "TỜ TRÌNH", "ĐƠN XIN"]):
                 blocks.append({"type": "title", "text": line, "align": "center", "bold": True})
+                has_title = True
             elif re.match(r'^(\d+[\.\)]|[-+*•]|a\)|b\)|c\))\s*', line):
                 blocks.append({"type": "list_item", "text": line})
             elif any(kw in line_u for kw in ["XÁC NHẬN", "NGƯỜI LÀM ĐƠN", "KÝ TÊN", "NGƯỜI TƯỜNG TRÌNH", "NGƯỜI KÝ"]):
@@ -170,12 +169,17 @@ TUYỆT ĐỐI CHỈ TRẢ VỀ JSON HỢP LỆ THEO SCHEMA, KHÔNG BÌNH LUẬN
             else:
                 blocks.append({"type": "paragraph", "text": line, "align": "left"})
                 
-        if len(blocks) <= 1:
-            blocks = [
-                {"type": "title", "text": "BẢN TƯỜNG TRÌNH TẠI NẠN GIAO THÔNG", "align": "center"},
-                {"type": "paragraph", "text": raw_text, "align": "left"}
-            ]
-            
+        if not has_title:
+            blocks.insert(1, {"type": "title", "text": "BẢN TƯỜNG TRÌNH", "align": "center", "bold": True})
+
+        has_signature = any(b.get("type") == "signature_split" for b in blocks)
+        if not has_signature:
+            blocks.append({
+                "type": "signature_split",
+                "left": "Nơi nhận:\n- Như trên;\n- Lưu: VT.",
+                "right": "NGƯỜI LÀM ĐƠN / NGƯỜI KÝ\n\n\n(Ký và ghi rõ họ tên)"
+            })
+
         return {"blocks": blocks}
 
 DECREE_30_SCHEMA = {
