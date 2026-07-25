@@ -18,7 +18,7 @@ to a ``StaticFiles`` mount over the built ``dist/`` is one line.
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 # NOTE: deliberately NO `from __future__ import annotations` — FastAPI
 # resolves request-handler type hints at runtime to wire up dependency
