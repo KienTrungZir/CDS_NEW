@@ -13,6 +13,7 @@ import { ResolutionPage } from "@/components/tools/pages/ResolutionPage";
 import { WorkflowPage } from "@/components/tools/pages/WorkflowPage";
 import { PrArticlePage } from "@/components/tools/pages/PrArticlePage";
 import { SentimentPage } from "@/components/tools/pages/SentimentPage";
+import { SettingsPage } from "@/components/tools/pages/SettingsPage";
 import { useHealth, useSpaces } from "@/api/queries";
 
 const ACTIVE_SPACE_KEY = "cds:active-space";
@@ -25,7 +26,8 @@ const TASK_KEYS: ReadonlySet<TaskKey> = new Set([
   "pr",
   "sentiment",
   "convert",
-  "handwriting"
+  "handwriting",
+  "settings"
 ]);
 
 import { TASK_SLUGS, taskFromPath } from "@/components/layout/tasks";
@@ -136,6 +138,9 @@ export default function App() {
       break;
     case "sentiment":
       centerPane = <SentimentPage />;
+      break;
+    case "settings":
+      centerPane = <SettingsPage />;
       break;
     default:
       centerPane = <ResolutionPage />;

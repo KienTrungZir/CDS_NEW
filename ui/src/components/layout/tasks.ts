@@ -77,7 +77,7 @@ export function taskFromPath(pathname: string): TaskKey | null {
   return SLUG_TO_TASK[cleaned] ?? null;
 }
 
-import { PenTool, Megaphone } from "lucide-react";
+import { PenTool, Megaphone, Settings as SettingsIcon } from "lucide-react";
 
 export const TASKS: TaskMeta[] = [
   // ── ỨNG DỤNG HÀNH CHÍNH & AI
@@ -129,5 +129,12 @@ export const TASKS: TaskMeta[] = [
     blurb: "Trích xuất biểu mẫu / ghi chú / CMND",
     icon: PenLine,
     category: "text",
+  },
+  {
+    key: "settings",
+    label: "Cài Đặt & Cấu Hình",
+    blurb: "Mô hình LLM, Auth token, Server health",
+    icon: SettingsIcon,
+    category: "dev",
   },
 ];
