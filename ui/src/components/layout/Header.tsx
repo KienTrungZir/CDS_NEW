@@ -53,9 +53,9 @@ export function Header({
       </button>
       <div className="flex items-center gap-2 text-xs">
         {modelName && (
-          <span className="meta-strong hidden items-center gap-1.5 border border-line bg-paper px-2 py-1 sm:inline-flex">
-            <Cpu size={11} className="text-accent" />
-            {modelName}
+          <span className="meta-strong hidden items-center gap-1.5 border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full font-mono font-bold sm:inline-flex">
+            <Cpu size={12} className="text-accent" />
+            {modelName === "anthropic" ? "☁️ Anthropic Claude 3.5" : modelName === "openai" ? "☁️ OpenAI GPT-4o" : `🏠 ${modelName}`}
           </span>
         )}
         {version && <span className="meta hidden sm:inline">v{version}</span>}

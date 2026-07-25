@@ -14,9 +14,9 @@ export function SettingsPage() {
   const [defaultTopK, setDefaultTopK] = useState(5);
 
   // LLM Config state (Local vs Cloud)
-  const [llmMode, setLlmMode] = useState<"local" | "cloud">("local");
-  const [provider, setProvider] = useState<"ollama" | "openai" | "anthropic" | "llamacpp">("ollama");
-  const [modelId, setModelId] = useState("qwen3:8b");
+  const [llmMode, setLlmMode] = useState<"local" | "cloud">("cloud");
+  const [provider, setProvider] = useState<"ollama" | "openai" | "anthropic" | "llamacpp">("anthropic");
+  const [modelId, setModelId] = useState("claude-3-5-sonnet-20241022");
   const [apiKey, setApiKey] = useState("");
   const [apiBase, setApiBase] = useState("");
   const [savingLlm, setSavingLlm] = useState(false);
