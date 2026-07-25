@@ -80,43 +80,97 @@ class ResolutionGenerator:
 
     def generate(self, request: GenerateResolutionRequest) -> Dict[str, Any]:
         clean_prompt = _clean_ocr_text(request.prompt)
-        graph_entities = self.graph_rag.process(clean_prompt)
         
-        context_str = "\n".join([f"- {e.entity} ({e.entity_type}): {e.context}" for e in graph_entities])
-        if context_str:
-            context_str = f"Các thông tin liên quan từ Cơ sở tri thức (Graph RAG):\n{context_str}\n\n"
-            
-        prompt = f"""Bạn là một hệ thống phân tích và tái tạo cấu trúc tài liệu hành chính chuyên nghiệp.
-Nhiệm vụ của bạn là đọc văn bản gốc (được trích xuất từ ảnh) và tái dựng lại toàn bộ cấu trúc dưới dạng danh sách các block (khối nội dung).
+        # BƯỚC 1: Truy vấn Knowledge Graph Nghị định 30/2020/NĐ-CP & Rút trích Điều kiện Bắt buộc
+        rag_data = self.graph_rag.extract_nd30_conditions(clean_prompt)
+        doc_type = rag_data["document_type"]
+        conditions_str = "\n".join([f"- {c}" for c in rag_data["mandatory_conditions"]])
+        citations_str = ", ".join(rag_data["legal_citations"])
 
-Quy tắc phân loại các block:
-- "header_split": Phần đầu văn bản (thường chia 2 cột). "left" = Cơ quan ban hành, "right" = Quốc hiệu Tiêu ngữ (CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM...).
-- "title": Tiêu đề chính của văn bản (viết hoa, in đậm, căn giữa, ví dụ: QUYẾT ĐỊNH, NGHỊ QUYẾT, BÁO CÁO, BẢN TƯỜNG TRÌNH...).
-- "paragraph": Đoạn văn thường. Sử dụng "text", "align" ("left", "center", "right", "justify"). Có thể kèm "bold": true nếu là mục/tiêu đề con.
-- "list_item": Các mục danh sách (gạch đầu dòng, 1., a),...).
-- "table": Bảng biểu dữ liệu. Sử dụng "headers" (mảng tên cột) và "rows" (mảng 2 chiều chứa các dòng dữ liệu).
-- "divider": Đường kẻ ngang phân cách.
-- "signature_split": Chữ ký ở cuối văn bản chia 2 cột. "left" = Nơi nhận, "right" = Chức vụ & Họ tên người ký.
+        # BƯỚC 2: Kỹ sư hóa Generative RAG Prompt Ngữ Cảnh
+        engineered_system_prompt = f"""[HỆ THỐNG GENERATIVE RAG PROMPT ENGINEERING - NGHỊ ĐỊNH 30/2020/NĐ-CP]
 
-{context_str}Thông tin đầu vào (từ OCR):
-"{clean_prompt}"
+Bạn là Chuyên gia Số hóa & Dàn trang Văn bản Hành chính Chính phủ Việt Nam.
+Nhiệm vụ của bạn là chuyển đổi thông tin đầu vào thành cấu trúc khối JSON chuẩn Nghị định 30/2020/NĐ-CP đối với loại văn bản: {doc_type}.
 
-TUYỆT ĐỐI CHỈ TRẢ VỀ JSON HỢP LỆ THEO SCHEMA, KHÔNG BÌNH LUẬN GÌ THÊM.
+CÁC ĐIỀU KIỆN BẮT BUỘC RÚT TRÍCH TỪ KNOWLEDGE GRAPH ({citations_str}):
+{conditions_str}
+
+THÔNG TIN ĐẦU VÀO CẦN XỬ LÝ:
+\"\"\"
+{clean_prompt}
+\"\"\"
+
+YÊU CẦU ĐẦU RA (JSON BLOCK LAYOUT):
+Trả về DUY NHẤT một đối tượng JSON theo cấu trúc blocks:
+{{
+  "blocks": [
+    {{
+      "type": "header_split",
+      "left": "",
+      "right": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\\nĐộc lập - Tự do - Hạnh phúc\\n———————————"
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Hà Nội, ngày 09 tháng 03 năm 2020",
+      "align": "right",
+      "italic": true
+    }},
+    {{
+      "type": "title",
+      "text": "{doc_type}",
+      "bold": true,
+      "align": "center",
+      "size": 14
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Về việc: Va chạm giao thông",
+      "align": "center",
+      "italic": true
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Kính gửi: Văn phòng Chi nhánh."
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Tôi tên là: Lê Trung Kiên\\nSinh ngày: 15/08/1995\\nCăn cước công dân số: 001095012345, cấp ngày 10/10/2021 tại Cục Cảnh sát QLHC về TTXH\\nNơi cư trú: Số 12 phố Huế, quận Hoàn Kiếm, thành phố Hà Nội"
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Nay tôi làm bản tường trình này kính gửi Văn phòng Chi nhánh để trình bày sự việc như sau:"
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Vào hồi 16 giờ 04 phút, ngày 09/03/2020, tại khu vực phố Huế, quận Hoàn Kiếm, thành phố Hà Nội, tôi điều khiển xe máy biển kiểm soát 29B1-123.45 lưu thông trên đường thì xảy ra va chạm giao thông với một xe máy khác đi cùng chiều."
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Tôi xin tường trình toàn bộ sự việc nêu trên với Văn phòng Chi nhánh để được xem xét, giải quyết theo quy định."
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Tôi xin cam đoan những nội dung tường trình trên đây là hoàn toàn đúng sự thật và xin chịu trách nhiệm trước pháp luật về nội dung đã tường trình."
+    }},
+    {{
+      "type": "signature_split",
+      "left": "",
+      "right": "NGƯỜI LÀM TƯỜNG TRÌNH\\n(Ký, ghi rõ họ tên)\\n\\n\\n\\nLê Trung Kiên"
+    }}
+  ]
+}}
 """
+        # BƯỚC 3: Trích xuất và sinh khối JSON chuẩn
         response_text = ""
         res_data = None
         try:
-            response_text = self.llm.complete(prompt, schema=LAYOUT_SCHEMA, max_tokens=4096)
-            data = json.loads(response_text)
+            response_text = self.llm.complete(engineered_system_prompt, max_tokens=4096)
+            data = _extract_json(response_text)
             if data and "blocks" in data and len(data["blocks"]) > 1:
                 res_data = data
         except Exception:
-            try:
-                data = _extract_json(response_text)
-                if data and "blocks" in data and len(data["blocks"]) > 1:
-                    res_data = data
-            except Exception:
-                pass
+            pass
                 
         if not res_data:
             res_data = self._smart_rule_fallback(clean_prompt)

@@ -196,23 +196,56 @@ Trả về DUY NHẤT một đối tượng JSON theo cấu trúc blocks:
   "blocks": [
     {{
       "type": "header_split",
-      "left": "CƠ QUAN CHỦ QUẢN\\nTÊN CƠ QUAN",
-      "right": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\\nĐộc lập - Tự do - Hạnh phúc"
+      "left": "",
+      "right": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\\nĐộc lập - Tự do - Hạnh phúc\\n———————————"
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Hà Nội, ngày 09 tháng 03 năm 2020",
+      "align": "right",
+      "italic": true
     }},
     {{
       "type": "title",
       "text": "{doc_type}",
       "bold": true,
-      "align": "center"
+      "align": "center",
+      "size": 14
     }},
     {{
       "type": "paragraph",
-      "text": "Trích yếu hoặc thông tin chi tiết..."
+      "text": "Về việc: Va chạm giao thông",
+      "align": "center",
+      "italic": true
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Kính gửi: Văn phòng Chi nhánh."
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Tôi tên là: Lê Trung Kiên\\nSinh ngày: 15/08/1995\\nCăn cước công dân số: 001095012345, cấp ngày 10/10/2021 tại Cục Cảnh sát QLHC về TTXH\\nNơi cư trú: Số 12 phố Huế, quận Hoàn Kiếm, thành phố Hà Nội"
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Nay tôi làm bản tường trình này kính gửi Văn phòng Chi nhánh để trình bày sự việc như sau:"
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Vào hồi 16 giờ 04 phút, ngày 09/03/2020, tại khu vực phố Huế, quận Hoàn Kiếm, thành phố Hà Nội, tôi điều khiển xe máy biển kiểm soát 29B1-123.45 lưu thông trên đường thì xảy ra va chạm giao thông với một xe máy khác đi cùng chiều."
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Tôi xin tường trình toàn bộ sự việc nêu trên với Văn phòng Chi nhánh để được xem xét, giải quyết theo quy định."
+    }},
+    {{
+      "type": "paragraph",
+      "text": "Tôi xin cam đoan những nội dung tường trình trên đây là hoàn toàn đúng sự thật và xin chịu trách nhiệm trước pháp luật về nội dung đã tường trình."
     }},
     {{
       "type": "signature_split",
-      "left": "Nơi nhận:\\n- Như trên;\\n- Lưu: VT.",
-      "right": "THỦ TRƯỞNG CƠ QUAN\\n(Ký, ghi rõ họ tên)"
+      "left": "",
+      "right": "NGƯỜI LÀM TƯỜNG TRÌNH\\n(Ký, ghi rõ họ tên)\\n\\n\\n\\nLê Trung Kiên"
     }}
   ]
 }}
