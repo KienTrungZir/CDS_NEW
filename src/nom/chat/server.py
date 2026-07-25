@@ -259,6 +259,70 @@ def build_app(
             ],
         }
 
+    from pydantic import BaseModel, Field
+
+    class LLMConfigPayload(BaseModel):
+        mode: str = "local"  # "local" or "cloud"
+        provider: str = "ollama"  # "ollama", "openai", "anthropic", "llamacpp"
+        model: Optional[str] = None
+        api_key: Optional[str] = None
+        api_base: Optional[str] = None
+
+    @app.post("/api/llm/config")
+    def update_llm_config(payload: LLMConfigPayload) -> dict[str, Any]:
+        """Hot-switch LLM adapter between Local (Ollama/llama.cpp) and Cloud AI (OpenAI/Anthropic) via Token."""
+        try:
+            new_llm: Any = None
+            if payload.provider == "openai":
+                from nom.llm.openai import OpenAI
+                kw: dict[str, Any] = {"model": payload.model or "gpt-4o-mini"}
+                if payload.api_key:
+                    kw["api_key"] = payload.api_key
+                if payload.api_base:
+                    kw["base_url"] = payload.api_base
+                new_llm = OpenAI(**kw)
+            elif payload.provider == "anthropic":
+                from nom.llm.anthropic import Anthropic
+                kw = {"model": payload.model or "claude-3-5-sonnet-20241022"}
+                if payload.api_key:
+                    kw["api_key"] = payload.api_key
+                if payload.api_base:
+                    kw["base_url"] = payload.api_base
+                new_llm = Anthropic(**kw)
+            elif payload.provider == "llamacpp":
+                from nom.llm.llamacpp import LlamaCpp
+                kw = {}
+                if payload.api_base:
+                    kw["endpoint"] = payload.api_base
+                new_llm = LlamaCpp(**kw)
+            else:
+                # Default: Ollama Local
+                from nom.llm.ollama import Ollama
+                kw = {"model": payload.model or "qwen3:8b", "think": False}
+                if payload.api_base:
+                    kw["host"] = payload.api_base
+                new_llm = Ollama(**kw)
+
+            # Update store LLM
+            if hasattr(store, "_llm"):
+                store._llm = new_llm
+
+            # Update resolution generator LLM
+            try:
+                from nom.resolution.router import set_generator_llm
+                set_generator_llm(new_llm)
+            except Exception:
+                pass
+
+            return {
+                "ok": True,
+                "mode": payload.mode,
+                "provider": payload.provider,
+                "active_model": _safe_attr(new_llm, "name") or getattr(new_llm, "model", payload.model or "active")
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Lỗi cấu hình LLM: {str(exc)}")
+
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         """Lightweight version + capabilities probe.

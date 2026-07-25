@@ -19,6 +19,10 @@ generator = ResolutionGenerator(model_name="qwen3:8b")
 dynamic_exporter = DynamicWordExporter()
 word_exporter = WordExporter()
 
+def set_generator_llm(new_llm: Any) -> None:
+    global generator
+    generator.llm = new_llm
+
 @router.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     """Extract text from uploaded image using Vintern VLM and return base64 string."""
