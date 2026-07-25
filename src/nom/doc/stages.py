@@ -604,9 +604,12 @@ class OCR:
                     page_img = pdf.pages[page_idx].to_image(resolution=200).original
                     if page_img.mode not in ("RGB", "L"):
                         page_img = page_img.convert("RGB")
-                    pages[page_idx] = pytesseract.image_to_string(
-                        page_img, lang=self.lang, config=self.config
-                    ).strip()
+                    try:
+                        pages[page_idx] = pytesseract.image_to_string(
+                            page_img, lang=self.lang, config=self.config
+                        ).strip()
+                    except Exception:
+                        pages[page_idx] = ""
             ctx.pages_text = pages
             ctx.text = "\n\n".join(pages)
             ctx.needs_ocr = []
@@ -620,14 +623,21 @@ class OCR:
         # Tesseract works best on RGB/grayscale; convert if needed.
         if image.mode not in ("RGB", "L"):
             image = image.convert("RGB")
-        text: str = pytesseract.image_to_string(
-            image,
-            lang=self.lang,
-            config=self.config,
-        )
-        # Tesseract sometimes emits trailing form-feeds and excessive
-        # whitespace — strip and collapse.
-        return text.strip()
+        try:
+            text: str = pytesseract.image_to_string(
+                image,
+                lang=self.lang,
+                config=self.config,
+            )
+            return text.strip()
+        except Exception:
+            try:
+                from nom.ocr import VinternHandwritingOcr
+                clf = VinternHandwritingOcr()
+                res = clf.transcribe(data)
+                return res.text
+            except Exception:
+                return ""
 
 
 class Normalize:
