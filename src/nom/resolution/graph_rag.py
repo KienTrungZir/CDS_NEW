@@ -1,13 +1,15 @@
 import re
-from typing import List, Dict
+from typing import List, Dict, Any
 from nom.resolution.schema import GraphEntity
+from nom.resolution.nd30_knowledge_graph import ND30KnowledgeGraph
 
 class SimpleGraphRAG:
     """
-    A lightweight Graph RAG implementation for entity extraction and linking.
-    In a production system, this would connect to Neo4j, LightRAG, or a VectorDB.
+    A lightweight Graph RAG implementation for entity extraction and linking
+    with Decree 30/2020/NĐ-CP Knowledge Graph support.
     """
     def __init__(self):
+        self.nd30_kg = ND30KnowledgeGraph()
         # Mock knowledge graph
         self.knowledge_graph = {
             "nghị định 30": "Nghị định 30/2020/NĐ-CP về công tác văn thư",
@@ -42,3 +44,8 @@ class SimpleGraphRAG:
         """Run the full Graph RAG pipeline for the given text"""
         entities = self.extract_entities(text)
         return self.retrieve_context(entities)
+
+    def extract_nd30_conditions(self, text: str) -> Dict[str, Any]:
+        """Extract mandatory legal conditions from Decree 30 Knowledge Graph."""
+        return self.nd30_kg.generate_context_rag_prompt(text)
+

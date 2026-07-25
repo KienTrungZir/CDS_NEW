@@ -33,6 +33,21 @@ async def upload_image(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi đọc ảnh: {str(e)}")
 
+class PromptEngineerRequest(BaseModel):
+    text: str
+    document_type: Optional[str] = None
+
+@router.post("/prompt-engineer")
+def prompt_engineer(req: PromptEngineerRequest):
+    """Query Decree 30 Knowledge Graph to extract mandatory conditions and build a context-aware RAG prompt."""
+    try:
+        from nom.resolution.nd30_knowledge_graph import ND30KnowledgeGraph
+        kg = ND30KnowledgeGraph()
+        result = kg.generate_context_rag_prompt(req.text, req.document_type)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi Generative RAG Prompt Engineer: {str(e)}")
+
 @router.post("/generate")
 def generate_resolution(request: GenerateResolutionRequest):
     """Generate document JSON using Graph RAG and Ollama. Dynamic if fields are provided."""

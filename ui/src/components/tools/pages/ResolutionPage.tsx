@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { 
   Upload, Save, Loader2, FileDown, FolderOpen, Trash2, GripVertical, Plus, 
   Table as TableIcon, Minus, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  Eye, EyeOff, FileCode, Copy, Download, ChevronUp, ChevronDown
+  Eye, EyeOff, FileCode, Copy, Download, ChevronUp, ChevronDown, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
+import { GenerativeRagStudioModal } from "./GenerativeRagStudioModal";
 
 interface Template {
   filename: string;
@@ -26,6 +27,7 @@ export function ResolutionPage() {
   
   const [nd30Data, setNd30Data] = useState<any | null>(null);
   const [showNd30Modal, setShowNd30Modal] = useState(false);
+  const [showRagStudioModal, setShowRagStudioModal] = useState(false);
 
   // Drag and Drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -325,23 +327,34 @@ export function ResolutionPage() {
       <div className="p-4 border-b bg-card flex items-center justify-between shadow-sm">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            📄 Tái tạo cấu trúc tài liệu từ Ảnh
+            📄 Soạn & Tái Tạo Văn Bản Hành Chính (NĐ 30/2020/NĐ-CP)
           </h1>
           <p className="text-xs text-muted-foreground">
-            Tự động đọc ảnh, phân tích bố cục đa thức và tái tạo file Word chuẩn 100%.
+            Phân tích bố cục đa thức, truy vấn Knowledge Graph NĐ 30 & Generative RAG Prompt Engineering.
           </p>
         </div>
         
-        {blocks && imageB64 && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowImagePreview(!showImagePreview)}
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setShowRagStudioModal(true)}
+            className="gap-2 bg-gradient-to-r from-accent to-purple-600 text-white shadow-glow hover:opacity-90 transition-all rounded-xl text-xs"
+            size="sm"
           >
-            {showImagePreview ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-            {showImagePreview ? "Ẩn ảnh gốc" : "Xem ảnh gốc song song"}
+            <Sparkles className="w-3.5 h-3.5" />
+            Generative RAG Studio
           </Button>
-        )}
+
+          {blocks && imageB64 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowImagePreview(!showImagePreview)}
+            >
+              {showImagePreview ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+              {showImagePreview ? "Ẩn ảnh gốc" : "Xem ảnh gốc song song"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {!blocks ? (
@@ -349,15 +362,23 @@ export function ResolutionPage() {
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="border-2 border-dashed rounded-xl p-12 text-center flex flex-col items-center justify-center bg-card shadow-sm">
               <Upload className="w-12 h-12 text-primary mb-4 animate-bounce" />
-              <h3 className="text-lg font-medium">Tải lên hình ảnh tài liệu</h3>
-              <p className="text-sm text-muted-foreground mb-6">Hỗ trợ các dạng văn bản hành chính, nghị quyết, thông báo, báo cáo...</p>
-              <div className="flex gap-4 items-center justify-center">
+              <h3 className="text-lg font-medium">Soạn Văn Bản Chuẩn Nghị Định 30/2020/NĐ-CP</h3>
+              <p className="text-sm text-muted-foreground mb-6">Tải ảnh lên hoặc dùng Generative RAG Prompt Studio truy vấn Knowledge Graph NĐ 30</p>
+              <div className="flex flex-wrap gap-4 items-center justify-center">
                 <Input type="file" accept="image/*" className="hidden" id="file-upload" onChange={handleUpload} disabled={loading} />
-                <Button asChild disabled={loading} size="lg">
+                <Button asChild disabled={loading} size="lg" className="rounded-xl">
                   <label htmlFor="file-upload" className="cursor-pointer">
                     {loading ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2 w-4 h-4" />}
                     Tải ảnh lên để bắt đầu
                   </label>
+                </Button>
+                <Button 
+                  size="lg"
+                  onClick={() => setShowRagStudioModal(true)}
+                  className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-glow gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Generative RAG Prompt Studio
                 </Button>
               </div>
             </div>
@@ -679,6 +700,14 @@ export function ResolutionPage() {
           </div>
         </div>
       )}
+
+      <GenerativeRagStudioModal
+        isOpen={showRagStudioModal}
+        onClose={() => setShowRagStudioModal(false)}
+        onApplyBlocks={(generatedBlocks) => {
+          setBlocks(generatedBlocks);
+        }}
+      />
     </div>
   );
 }
