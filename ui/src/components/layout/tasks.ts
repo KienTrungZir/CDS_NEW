@@ -31,7 +31,8 @@ export type TaskKey =
   | "resolution"
   | "workflow"
   | "pr"
-  | "sentiment";
+  | "sentiment"
+  | "graph";
 
 export interface TaskMeta {
   key: TaskKey;
@@ -66,6 +67,7 @@ export const TASK_SLUGS: Record<TaskKey, string> = {
   workflow: "/workflow",
   pr: "/pr",
   sentiment: "/sentiment",
+  graph: "/graph",
 };
 
 export const SLUG_TO_TASK: Record<string, TaskKey> = Object.fromEntries(
@@ -77,7 +79,7 @@ export function taskFromPath(pathname: string): TaskKey | null {
   return SLUG_TO_TASK[cleaned] ?? null;
 }
 
-import { PenTool, Megaphone, Settings as SettingsIcon } from "lucide-react";
+import { PenTool, Megaphone, Settings as SettingsIcon, Network } from "lucide-react";
 
 export const TASKS: TaskMeta[] = [
   // ── ỨNG DỤNG HÀNH CHÍNH & AI
@@ -107,6 +109,13 @@ export const TASKS: TaskMeta[] = [
     label: "Phân tích dư luận",
     blurb: "Đọc & tóm tắt ý kiến nhân dân",
     icon: PenTool,
+    category: "rag",
+  },
+  {
+    key: "graph",
+    label: "Mạng lưới Tri thức & Chat AI",
+    blurb: "Đồ thị 2D tương tác & Tra cứu RAG",
+    icon: Network,
     category: "rag",
   },
   {

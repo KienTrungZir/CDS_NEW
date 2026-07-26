@@ -73,166 +73,339 @@ def _clean_ocr_text(text: str) -> str:
         cleaned_lines.append(line)
     return "\n".join(cleaned_lines)
 
+from nom.resolution.advanced_rag import AdvancedRAG
+from nom.resolution.evaluator import RAGEvaluator
+
 class ResolutionGenerator:
     def __init__(self, model_name: str = "qwen3:8b"):
         self.llm = Ollama(model=model_name, think=False, timeout=45.0)
-        self.graph_rag = SimpleGraphRAG()
+        self.rag = AdvancedRAG(llm=self.llm)
+        self.evaluator = RAGEvaluator()
 
     def generate(self, request: GenerateResolutionRequest) -> Dict[str, Any]:
         clean_prompt = _clean_ocr_text(request.prompt)
         
-        # BƯỚC 1: Truy vấn Knowledge Graph Nghị định 30/2020/NĐ-CP & Rút trích Điều kiện Bắt buộc
-        rag_data = self.graph_rag.extract_nd30_conditions(clean_prompt)
+        # BƯỚC 1: Truy vấn Advanced RAG Pipeline (Query Transform -> Vector Store -> Filter -> Rerank)
+        rag_data = self.rag.retrieve(clean_prompt)
         doc_type = rag_data["document_type"]
         conditions_str = "\n".join([f"- {c}" for c in rag_data["mandatory_conditions"]])
         citations_str = ", ".join(rag_data["legal_citations"])
+        vector_context_str = rag_data.get("context", "")
 
-        # BƯỚC 2: Kỹ sư hóa Generative RAG Prompt Ngữ Cảnh
+        # BƯỚC 2: Kỹ sư hóa Generative RAG Prompt Ngữ Cảnh với Vector Context
         engineered_system_prompt = f"""[HỆ THỐNG GENERATIVE RAG PROMPT ENGINEERING - NGHỊ ĐỊNH 30/2020/NĐ-CP]
 
 Bạn là Chuyên gia Số hóa & Dàn trang Văn bản Hành chính Chính phủ Việt Nam.
-Nhiệm vụ của bạn là chuyển đổi thông tin đầu vào thành cấu trúc khối JSON chuẩn Nghị định 30/2020/NĐ-CP đối với loại văn bản: {doc_type}.
+Nhiệm vụ: Đọc THÔNG TIN ĐẦU VÀO bên dưới, trích xuất các trường dữ liệu, rồi TẠO HOÀN TOÀN MỚI một văn bản hành chính loại [{doc_type}] theo chuẩn Nghị định 30/2020/NĐ-CP.
+
+{vector_context_str}
 
 CÁC ĐIỀU KIỆN BẮT BUỘC RÚT TRÍCH TỪ KNOWLEDGE GRAPH ({citations_str}):
 {conditions_str}
+
+QUY TẮC SINH 11 KHỐI BẮT BUỘC cho [{doc_type}]:
+ Khối 1 - header_split: left = tên cơ quan (nếu có), right = Quốc hiệu + Tiêu ngữ + dòng kẻ ———
+ Khối 2 - paragraph: Địa danh + ngày tháng năm (lấy từ input, nếu không có dùng ngày hiện tại), align right, italic
+ Khối 3 - title: Tên loại văn bản IN HOA ĐẬM, căn giữa, size 14
+ Khối 4 - paragraph: Trích yếu "Về việc: [chủ đề sự việc]", căn giữa, italic
+ Khối 5 - paragraph: "Kính gửi: [tên cơ quan/người nhận]"
+ Khối 6 - paragraph: Thông tin cá nhân người làm đơn (họ tên, ngày sinh, CCCD, địa chỉ, chức vụ nếu có)
+ Khối 7 - paragraph: Câu mở đầu nội dung ("Nay tôi làm bản tường trình..." hoặc tương đương)
+ Khối 8 - paragraph: Diễn biến chi tiết sự việc theo trình tự thời gian (trích từ input)
+ Khối 9 - paragraph: Đề nghị/kết luận sự việc
+ Khối 10 - paragraph: Cam kết nội dung đúng sự thật và chịu trách nhiệm pháp luật
+ Khối 11 - signature_split: left = Nơi nhận hoặc để trống, right = chức danh ký + họ tên
+
+QUY TẮC QUAN TRỌNG:
+- TUYỆT ĐỐI KHÔNG dùng dữ liệu ví dụ cứng ("Lê Trung Kiên", "29B1-123.45", v.v.) nếu input không chứa thông tin đó.
+- PHẢI rút trích thông tin thực tế từ THÔNG TIN ĐẦU VÀO để điền vào các khối.
+- Nếu input thiếu thông tin nào (ví dụ không có CCCD), để trống trường đó hoặc ghi "[chưa có thông tin]".
+- Phải tạo đủ 11 khối, không ít hơn.
+- Chỉ trả về JSON, KHÔNG giải thích thêm.
 
 THÔNG TIN ĐẦU VÀO CẦN XỬ LÝ:
 \"\"\"
 {clean_prompt}
 \"\"\"
 
-YÊU CẦU ĐẦU RA (JSON BLOCK LAYOUT):
-Trả về DUY NHẤT một đối tượng JSON theo cấu trúc blocks:
+ĐỊNH DẠNG JSON ĐẦU RA (thay thế [...] bằng nội dung thực từ input):
 {{
   "blocks": [
-    {{
-      "type": "header_split",
-      "left": "",
-      "right": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\\nĐộc lập - Tự do - Hạnh phúc\\n———————————"
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Hà Nội, ngày 09 tháng 03 năm 2020",
-      "align": "right",
-      "italic": true
-    }},
-    {{
-      "type": "title",
-      "text": "{doc_type}",
-      "bold": true,
-      "align": "center",
-      "size": 14
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Về việc: Va chạm giao thông",
-      "align": "center",
-      "italic": true
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Kính gửi: Văn phòng Chi nhánh."
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Tôi tên là: Lê Trung Kiên\\nSinh ngày: 15/08/1995\\nCăn cước công dân số: 001095012345, cấp ngày 10/10/2021 tại Cục Cảnh sát QLHC về TTXH\\nNơi cư trú: Số 12 phố Huế, quận Hoàn Kiếm, thành phố Hà Nội"
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Nay tôi làm bản tường trình này kính gửi Văn phòng Chi nhánh để trình bày sự việc như sau:"
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Vào hồi 16 giờ 04 phút, ngày 09/03/2020, tại khu vực phố Huế, quận Hoàn Kiếm, thành phố Hà Nội, tôi điều khiển xe máy biển kiểm soát 29B1-123.45 lưu thông trên đường thì xảy ra va chạm giao thông với một xe máy khác đi cùng chiều."
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Tôi xin tường trình toàn bộ sự việc nêu trên với Văn phòng Chi nhánh để được xem xét, giải quyết theo quy định."
-    }},
-    {{
-      "type": "paragraph",
-      "text": "Tôi xin cam đoan những nội dung tường trình trên đây là hoàn toàn đúng sự thật và xin chịu trách nhiệm trước pháp luật về nội dung đã tường trình."
-    }},
-    {{
-      "type": "signature_split",
-      "left": "",
-      "right": "NGƯỜI LÀM TƯỜNG TRÌNH\\n(Ký, ghi rõ họ tên)\\n\\n\\n\\nLê Trung Kiên"
-    }}
+    {{"type": "header_split", "left": "[Tên cơ quan nếu có, hoặc để trống]", "right": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\\nĐộc lập - Tự do - Hạnh phúc\\n———————————"}},
+    {{"type": "paragraph", "text": "[Địa danh], ngày [DD] tháng [MM] năm [YYYY]", "align": "right", "italic": true}},
+    {{"type": "title", "text": "{doc_type}", "bold": true, "align": "center", "font_size": 14}},
+    {{"type": "paragraph", "text": "Về việc: [trích yếu nội dung sự việc]", "align": "center", "italic": true}},
+    {{"type": "paragraph", "text": "Kính gửi: [tên cơ quan hoặc người nhận]."}},
+    {{"type": "paragraph", "text": "Tôi tên là: [họ tên đầy đủ]\\nSinh ngày: [ngày sinh]\\nSố CCCD: [số CCCD nếu có]\\nChức vụ/Nghề nghiệp: [chức vụ hoặc nghề nghiệp nếu có]\\nNơi cư trú: [địa chỉ thường trú]"}},
+    {{"type": "paragraph", "text": "Nay tôi làm {doc_type} này kính gửi [cơ quan nhận] để trình bày sự việc như sau:"}},
+    {{"type": "paragraph", "text": "[Diễn biến chi tiết sự việc được trích xuất và tổng hợp từ thông tin đầu vào, theo trình tự thời gian, địa điểm, sự việc xảy ra]"}},
+    {{"type": "paragraph", "text": "[Đề nghị / kết luận sự việc — ví dụ: Kính mong cơ quan xem xét, giải quyết theo đúng quy định pháp luật.]"}},
+    {{"type": "paragraph", "text": "Tôi xin cam đoan những nội dung nêu trên là hoàn toàn đúng sự thật và xin chịu trách nhiệm trước pháp luật về nội dung đã tường trình."}},
+    {{"type": "signature_split", "left": "", "right": "NGƯỜI LÀM {doc_type}\\n(Ký, ghi rõ họ tên)\\n\\n\\n\\n[Họ tên người ký]"}}
   ]
 }}
 """
-        # BƯỚC 3: Trích xuất và sinh khối JSON chuẩn
+        # BƯỚC 3: Trích xuất và sinh khối JSON chuẩn từ LLM
         response_text = ""
         res_data = None
         try:
             response_text = self.llm.complete(engineered_system_prompt, max_tokens=4096)
             data = _extract_json(response_text)
-            if data and "blocks" in data and len(data["blocks"]) > 1:
+            if data and "blocks" in data and len(data["blocks"]) >= 8:
                 res_data = data
         except Exception:
             pass
                 
         if not res_data:
-            res_data = self._smart_rule_fallback(clean_prompt)
+            res_data = self._smart_rule_fallback(clean_prompt, doc_type, rag_data)
             
         if "blocks" in res_data:
             res_data["nd30_data"] = blocks_to_nd30(res_data["blocks"])
+
+        # BƯỚC 4: RAG Evaluation & Dynamic Citations Metadata
+        eval_result = self.evaluator.evaluate(
+            blocks=res_data.get("blocks", []),
+            doc_type=doc_type,
+            query=clean_prompt,
+            retrieved_chunks=rag_data.get("chunks", []),
+            retrieval_scores=rag_data.get("retrieval_scores", {}),
+        )
+
+        res_data["rag_metadata"] = {
+            "document_type": doc_type,
+            "legal_citations": rag_data.get("legal_citations", []),
+            "evaluation": eval_result,
+            "retrieved_chunks_count": len(rag_data.get("chunks", [])),
+        }
             
         return res_data
 
-    def _smart_rule_fallback(self, raw_text: str) -> dict:
+    def _smart_rule_fallback(self, raw_text: str, doc_type: str = "BẢN TƯỜNG TRÌNH", rag_data: dict = None) -> dict:
+        """Smart rule-based fallback that produces all 11 required blocks per NĐ 30/2020."""
+        import re as _re
         text = _clean_ocr_text(raw_text)
         lines = [line.strip() for line in text.split("\n") if line.strip()]
-        blocks = []
         
-        header_left, header_right, body_lines = [], [], []
-        header_keywords = ["UBND", "ỦY BÀN", "BỘ", "SỞ", "CÔNG TY", "HỘI ĐỒNG", "TRƯỜNG", "BAN", "ĐƠN VỊ", "CHI NHÁNH", "CỤC", "CHÍNH PHỦ", "VĂN PHÒNG"]
+        # --- Parse header elements from input ---
+        header_left_lines, header_right_lines, body_lines = [], [], []
+        header_keywords = ["UBND", "ỦY BAN", "BỘ", "SỞ", "CÔNG TY", "HỘI ĐỒNG", "TRƯỜNG", "BAN", "ĐƠN VỊ", "CHI NHÁNH", "CỤC", "CHÍNH PHỦ", "VĂN PHÒNG"]
+        title_keywords = ["BẢN TƯỜNG TRÌNH", "NGHỊ QUYẾT", "QUYẾT ĐỊNH", "THÔNG BÁO", "BÁO CÁO", "TỜ TRÌNH", "ĐƠN XIN", "BIÊN BẢN", "GIẤY MỜI", "CÔNG VĂN"]
         
         for idx, line in enumerate(lines):
             line_u = line.upper()
-            if any(kw in line_u for kw in ["BẢN TƯỜNG TRÌNH", "NGHỊ QUYẾT", "QUYẾT ĐỊNH", "THÔNG BÁO", "BÁO CÁO", "TỜ TRÌNH", "ĐƠN XIN", "ĐƠN NGHỊ ĐỊNH"]):
+            if any(kw in line_u for kw in title_keywords):
                 body_lines.extend(lines[idx:])
                 break
             elif any(kw in line_u for kw in ["CỘNG HÒA", "ĐỘC LẬP", "HẠNH PHÚC", "VIỆT NAM"]):
-                header_right.append(line)
+                header_right_lines.append(line)
             elif any(kw in line_u for kw in header_keywords):
-                header_left.append(line)
+                header_left_lines.append(line)
             else:
                 body_lines.append(line)
-                
-        blocks.append({
-            "type": "header_split",
-            "left": "\n".join(header_left) if header_left else "CƠ QUAN / ĐƠN VỊ",
-            "right": "\n".join(header_right) if header_right else "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc"
-        })
-            
-        has_title = False
+        
+        # --- Extract key information using regex ---
+        full_text = raw_text
+        
+        # --- Helper: normalize Vietnamese (strip diacritics) ---
+        def _norm(s: str) -> str:
+            import unicodedata
+            return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn').lower()
+        
+        full_text_norm = _norm(full_text)
+        
+        # Detect date — support both "ngay 20/07/2026" and "20/07/2026"
+        date_match = _re.search(
+            r'(?:ngay|hoi|vao|ngày|hồi|vào)[\s,]*(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{4})',
+            full_text_norm, _re.IGNORECASE
+        )
+        if not date_match:
+            date_match = _re.search(r'(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})', full_text)
+        date_str = ""
+        if date_match:
+            g = date_match.groups()
+            nums = [x for x in g if x and _re.match(r'^\d+$', x)]
+            if len(nums) >= 3:
+                date_str = f"ngày {nums[0]} tháng {nums[1]} năm {nums[2]}"
+        
+        # Detect location — support "tai Ha Noi" or "tại Hà Nội"
+        loc_match = _re.search(r'(?:tai|tại)\s+([^,\.\n]{3,40}?)(?:\s*,|\s*\.\s|\s*\n|$)', full_text_norm, _re.IGNORECASE)
+        if loc_match:
+            location = loc_match.group(1).strip()
+        else:
+            # Try to find office/company name as location reference
+            off_match = _re.search(r'(?:van phong|van phong|cong ty|co quan)[\s]+([^,\.\n]{3,40})', full_text_norm, _re.IGNORECASE)
+            location = off_match.group(1).strip() if off_match else "Hà Nội"
+        
+        # Detect person name — handle "ten la Nguyen Van An" or "tôi tên là Nguyễn Văn An"
+        name_match = _re.search(
+            r'(?:ten(?:\s+la)?|ho(?:\s+va)?\s+ten|tôi tên là|tên là)[:\s]+([A-Za-zÀ-ỹĐđ][A-Za-zÀ-ỹĐđ\s]{2,40}?)(?:[,\n]|\s{2,}|$)',
+            full_text, _re.IGNORECASE
+        )
+        if not name_match:
+            # Try normalized version
+            nm2 = _re.search(
+                r'(?:ten(?:\s+la)?|ho(?:\s+va)?\s+ten)[:\s]+([A-Za-z][A-Za-z\s]{2,40}?)(?:[,\n]|\s{2,}|$)',
+                full_text_norm, _re.IGNORECASE
+            )
+            name_match = nm2
+        person_name = name_match.group(1).strip() if name_match else "[Họ và tên người làm đơn]"
+        # Clean up person_name — remove trailing noise
+        person_name = _re.sub(r'[,\.;].*', '', person_name).strip()
+        
+        # Detect DOB — "sinh ngay 12/05/1990" or "ngay sinh: 12/05/1990"
+        dob_match = _re.search(
+            r'(?:sinh\s*ngay|ngay\s*sinh|sinh\s*ngày|ngày\s*sinh)[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})',
+            full_text_norm, _re.IGNORECASE
+        )
+        dob_str = dob_match.group(1) if dob_match else "[Ngày sinh]"
+        
+        # Detect CCCD/CMND
+        cccd_match = _re.search(r'(?:cccd|cmnd|can cuoc|chung minh|căn cước|chứng minh)[^\d]*(\d{9,12})', full_text_norm, _re.IGNORECASE)
+        if not cccd_match:
+            cccd_match = _re.search(r'(?:CCCD|CMND)[^\d]*(\d{9,12})', full_text)
+        cccd_str = cccd_match.group(1) if cccd_match else "[Số CCCD/CMND]"
+        
+        # Detect address — "noi cu tru tai 45 Nguyen Trai" or "địa chỉ: ..."
+        addr_match = _re.search(
+            r'(?:noi cu tru|dia chi|cu tru|thuong tru|địa chỉ|cư trú|thường trú)[:\s]+([^\n\.]{5,80})',
+            full_text_norm, _re.IGNORECASE
+        )
+        if addr_match:
+            address_str = addr_match.group(1).strip().rstrip(',;')
+        else:
+            # Try after CCCD line
+            addr_match2 = _re.search(r'\d{9,12}[^\n]*\n([^\n]+)', full_text)
+            address_str = addr_match2.group(1).strip() if addr_match2 else "[Địa chỉ thường trú]"
+        
+        # Detect recipient — "Kinh gui Giam doc..." or "Kính gửi: ..."
+        kg_match = _re.search(
+            r'(?:kinh\s*gui|kính\s*gửi)[:\s]+([^\n\.]{3,80})',
+            full_text_norm, _re.IGNORECASE
+        )
+        if not kg_match:
+            kg_match = _re.search(r'(?:kính\s*gửi)[:\s]+([^\n\.]{3,80})', full_text, _re.IGNORECASE)
+        recipient = kg_match.group(1).strip().rstrip('.,;') if kg_match else "[Cơ quan/Người có thẩm quyền]"
+        
+        # Detect subject — "ve viec" or "về việc"
+        vv_match = _re.search(r'(?:ve\s*viec|về\s*việc|v/v)[:\s]+([^\n\.]{3,80})', full_text_norm, _re.IGNORECASE)
+        subject = vv_match.group(1).strip() if vv_match else "[Trích yếu nội dung]"
+        
+        # Smart subject: if no explicit v/v, infer from event keywords
+        if subject == "[Trích yếu nội dung]":
+            event_kw_map = [
+                (r'lam hu|hu hong|pha vo|phá vỡ|làm hư|hư hỏng', "Sự cố làm hư hỏng tài sản"),
+                (r'va cham|tai nan|va chạm|tai nạn', "Va chạm giao thông"),
+                (r'mat tien|mat vi|mat ví|mất tiền', "Mất tài sản"),
+                (r'vang mat|nghi phep|vắng mặt|nghỉ phép', "Vắng mặt không phép"),
+            ]
+            for pattern, label in event_kw_map:
+                if _re.search(pattern, full_text_norm, _re.IGNORECASE):
+                    subject = label
+                    break
+        
+        # Detect event description lines (body)
+        event_lines = []
+        skip_norm = [_norm(kw) for kw in (title_keywords + ["KÍNH GỬI", "VỀ VIỆC", "V/V", "TÔI TÊN", "HỌ TÊN", "SINH NGÀY", "CCCD", "CMND", "CAM ĐOAN", "XIN CAM"])]
         for line in body_lines:
-            line_u = line.upper()
-            if any(kw in line_u for kw in ["BẢN TƯỜNG TRÌNH", "NGHỊ QUYẾT", "QUYẾT ĐỊNH", "THÔNG BÁO", "BÁO CÁO", "TỜ TRÌNH", "ĐƠN XIN"]):
-                blocks.append({"type": "title", "text": line, "align": "center", "bold": True})
-                has_title = True
-            elif re.match(r'^(\d+[\.\)]|[-+*•]|a\)|b\)|c\))\s*', line):
-                blocks.append({"type": "list_item", "text": line})
-            elif any(kw in line_u for kw in ["XÁC NHẬN", "NGƯỜI LÀM ĐƠN", "KÝ TÊN", "NGƯỜI TƯỜNG TRÌNH", "NGƯỜI KÝ"]):
-                blocks.append({
-                    "type": "signature_split",
-                    "left": "Nơi nhận:\n- Như trên;\n- Lưu: VT.",
-                    "right": f"{line}\n\n\n(Ký và ghi rõ họ tên)"
-                })
-            else:
-                blocks.append({"type": "paragraph", "text": line, "align": "left"})
-                
-        if not has_title:
-            blocks.insert(1, {"type": "title", "text": "BẢN TƯỜNG TRÌNH", "align": "center", "bold": True})
-
-        has_signature = any(b.get("type") == "signature_split" for b in blocks)
-        if not has_signature:
-            blocks.append({
+            ln = _norm(line)
+            if not any(kw in ln for kw in skip_norm) and len(line) > 15:
+                event_lines.append(line)
+        event_text = " ".join(event_lines) if event_lines else raw_text.strip()
+        
+        # Determine conclusion text
+        conclusion_kw_norm = ["de nghi", "kinh de nghi", "yeu cau", "kinh mong", "xin duoc"]
+        conclusion_lines = [l for l in body_lines if any(kw in _norm(l) for kw in conclusion_kw_norm)]
+        conclusion_text = conclusion_lines[0] if conclusion_lines else f"Kính mong {recipient} xem xét, giải quyết theo đúng quy định."
+        
+        # Determine signing role based on doc type  
+        signing_roles = {
+            "BẢN TƯỜNG TRÌNH": "NGƯỜI LÀM TƯỜNG TRÌNH",
+            "TỜ TRÌNH": "NGƯỜI TRÌNH",
+            "BÁO CÁO": "NGƯỜI BÁO CÁO",
+            "BIÊN BẢN": "CHỦ TỌA / THƯ KÝ",
+            "GIẤY MỜI": "THỦ TRƯỞNG CƠ QUAN",
+            "CÔNG VĂN": "NGƯỜI KÝ",
+            "NGHỊ QUYẾT": "TM. HỘI ĐỒNG\nCHỦ TỊCH",
+            "QUYẾT ĐỊNH": "THỦ TRƯỞNG CƠ QUAN",
+        }
+        signing_role = signing_roles.get(doc_type, "NGƯỜI KÝ")
+        
+        loc_date_str = f"{location}, {date_str}" if date_str else f"{location}, ngày ...... tháng ...... năm ......"
+        header_left = "\n".join(header_left_lines) if header_left_lines else ""
+        
+        # Build 11 required blocks
+        blocks = [
+            # Khối 1: Phần đầu 2 cột
+            {
+                "type": "header_split",
+                "left": header_left,
+                "right": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n———————————"
+            },
+            # Khối 2: Địa danh + Ngày tháng
+            {
+                "type": "paragraph",
+                "text": loc_date_str,
+                "align": "right",
+                "italic": True
+            },
+            # Khối 3: Tên loại văn bản
+            {
+                "type": "title",
+                "text": doc_type,
+                "bold": True,
+                "align": "center",
+                "font_size": 14
+            },
+            # Khối 4: Trích yếu
+            {
+                "type": "paragraph",
+                "text": f"Về việc: {subject}",
+                "align": "center",
+                "italic": True
+            },
+            # Khối 5: Kính gửi
+            {
+                "type": "paragraph",
+                "text": f"Kính gửi: {recipient}."
+            },
+            # Khối 6: Thông tin cá nhân
+            {
+                "type": "paragraph",
+                "text": (
+                    f"Tôi tên là: {person_name}\n"
+                    f"Sinh ngày: {dob_str}\n"
+                    f"Số CCCD/CMND: {cccd_str}\n"
+                    f"Nơi cư trú: {address_str}"
+                )
+            },
+            # Khối 7: Mở đầu nội dung
+            {
+                "type": "paragraph",
+                "text": f"Nay tôi xin làm {doc_type} này kính gửi {recipient} để trình bày sự việc như sau:"
+            },
+            # Khối 8: Diễn biến sự việc
+            {
+                "type": "paragraph",
+                "text": event_text,
+                "align": "justify"
+            },
+            # Khối 9: Đề nghị / Kết luận
+            {
+                "type": "paragraph",
+                "text": conclusion_text
+            },
+            # Khối 10: Cam kết
+            {
+                "type": "paragraph",
+                "text": "Tôi xin cam đoan những nội dung nêu trên là hoàn toàn đúng sự thật và xin chịu trách nhiệm trước pháp luật về những nội dung đã trình bày."
+            },
+            # Khối 11: Chữ ký
+            {
                 "type": "signature_split",
-                "left": "Nơi nhận:\n- Như trên;\n- Lưu: VT.",
-                "right": "NGƯỜI LÀM ĐƠN / NGƯỜI KÝ\n\n\n(Ký và ghi rõ họ tên)"
-            })
+                "left": "",
+                "right": f"{signing_role}\n(Ký, ghi rõ họ tên)\n\n\n\n{person_name}"
+            }
+        ]
 
         return {"blocks": blocks}
 

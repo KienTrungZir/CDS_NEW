@@ -108,6 +108,21 @@ class ND30KnowledgeGraph:
                 "Nội dung cuộc họp, Thời gian & Địa điểm cụ thể",
                 "Chữ ký & Nơi nhận"
             ]
+        },
+        "GIẤY NGHỈ PHÉP": {
+            "cite": "Điều 7 NĐ 30/2020/NĐ-CP & Phụ lục I (Mẫu 1.10)",
+            "mandatory": [
+                "Quốc hiệu & Tiêu ngữ (Phía trên bên phải)",
+                "Tên cơ quan/đơn vị chủ quản (Phía trên bên trái)",
+                "Tên loại văn bản: GIẤY NGHỈ PHÉP (In hoa đậm, 14pt, căn giữa)",
+                "Kính gửi: Ban Giám đốc / Thủ trưởng đơn vị & Phòng HR",
+                "Thông tin cá nhân (Họ tên, Chức vụ, Bộ phận công tác)",
+                "Số ngày xin nghỉ, Thời gian xin nghỉ (Từ ngày... Đến ngày...)",
+                "Lý do xin nghỉ (Nghỉ việc riêng, Nghỉ ốm, Nghỉ dưỡng...)",
+                "Nơi nghỉ phép & Số điện thoại liên hệ khi cần",
+                "Bàn giao công việc cho nhân sự thay thế",
+                "Ý kiến phê duyệt của Trưởng bộ phận & Chữ ký người làm đơn (Mực màu xanh)"
+            ]
         }
     }
 
@@ -124,25 +139,66 @@ class ND30KnowledgeGraph:
     def __init__(self):
         pass
 
+    @staticmethod
+    def _normalize(text: str) -> str:
+        """Strip Vietnamese diacritics for robust keyword matching."""
+        import unicodedata
+        # NFD decompose then remove combining marks
+        nfd = unicodedata.normalize('NFD', text)
+        return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn').lower()
+
     def detect_document_type(self, text: str) -> str:
-        """Identify the document type from user input string."""
+        """Identify the document type from user input string (supports both accented and non-accented Vietnamese)."""
         t = text.lower()
-        if "tường trình" in t or "va chạm" in t or "tai nạn" in t or "sự cố" in t:
+        tn = self._normalize(text)  # normalized (no diacritics)
+
+        # Check for listing / catalog request intent
+        list_kw = [
+            "liệt kê", "liet ke", "danh sách", "danh sach", "các loại văn bản", "cac loai van ban",
+            "những văn bản", "nhung van ban", "có loại văn bản nào", "co loai van ban nao",
+            "tao nhung", "tạo những", "tạo văn bản", "tao van ban", "chọn văn bản", "chon van ban"
+        ]
+        if any(kw in t or kw in tn for kw in list_kw):
+            return "DANH SÁCH VĂN BẢN"
+        
+        # GIẤY NGHỈ PHÉP keywords including typos
+        nghi_phep_kw = [
+            "nghỉ", "nghi", "nhgi", "nghỉ phép", "nghi phep", "nhgi phep",
+            "xin nghỉ", "xin nghi", "xin nhgi", "nghỉ việc", "nghi viec", "nhgi viec",
+            "thôi việc", "thoi viec", "nghỉ ốm", "nghi om", "nghỉ thai sản", "nghi thai san",
+            "muon nghi", "muốn nghỉ", "muon nhgi", "muốn nhgi"
+        ]
+        if any(kw in t or kw in tn for kw in nghi_phep_kw):
+            return "GIẤY NGHỈ PHÉP"
+
+        # BẢN TƯỜNG TRÌNH - highest priority, many triggering phrases and common typos
+        tuong_trinh_kw = [
+            "tường trình", "tuong trinh",
+            "va chạm", "va cham",
+            "tai nạn", "tai nan", "tai nang", "tai anng", "anng",
+            "sự cố", "su co",
+            "bản tường", "ban tuong",
+            "trình bày sự việc", "trinh bay su viec",
+            "lam hu", "làm hư", "làm mất", "lam mat", "hư xe", "nga xe",
+            "xin tường", "xin tuong", "vi phạm", "vi pham", "thiệt hại", "thiet hai",
+            "giờ phải làm sao", "gio phai lam sao", "phải làm sao", "phai lam sao", "xử lý sao", "xu ly sao"
+        ]
+        if any(kw in t or kw in tn for kw in tuong_trinh_kw):
             return "BẢN TƯỜNG TRÌNH"
-        elif "nghị quyết" in t:
+        
+        if "nghị quyết" in t or "nghi quyet" in tn:
             return "NGHỊ QUYẾT"
-        elif "quyết định" in t:
+        if "quyết định" in t or "quyet dinh" in tn:
             return "QUYẾT ĐỊNH"
-        elif "báo cáo" in t:
+        if "báo cáo" in t or "bao cao" in tn:
             return "BÁO CÁO"
-        elif "tờ trình" in t:
+        if "tờ trình" in t or "to trinh" in tn:
             return "TỜ TRÌNH"
-        elif "biên bản" in t:
+        if "biên bản" in t or "bien ban" in tn:
             return "BIÊN BẢN"
-        elif "giấy mời" in t or "kính mời" in t:
+        if "giấy mời" in t or "giay moi" in tn or "kính mời" in t or "kinh moi" in tn:
             return "GIẤY MỜI"
-        else:
-            return "CÔNG VĂN"
+        return "CÔNG VĂN"
 
     def query_mandatory_conditions(self, text: str, doc_type_override: Optional[str] = None) -> Dict[str, Any]:
         """Extract mandatory legal conditions, citations, and structural rules."""
