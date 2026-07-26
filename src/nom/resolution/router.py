@@ -216,6 +216,13 @@ Bạn đang cần mình hỗ trợ soạn thảo loại văn bản nào (Nghỉ 
 1. **Thẩm quyền ký**: Người đứng đầu cơ quan ký tất cả văn bản hoặc giao cấp phó ký thay (KT.).
 2. **Quy chuẩn mực ký**: Đối với văn bản giấy, người có thẩm quyền **phải ký bằng mực màu xanh**, không dùng mực đỏ, mực đen hoặc bút chì."""
 
+        elif any(f in msg_norm for f in ["KHONG DONG Y", "KO DONG Y", "CACH LAM", "CHUA DUNG", "SAI ROI"]):
+            dynamic_guidance = f"""Dạ, mình rất tiếc nếu phản hồi vừa rồi chưa đúng ý hoặc chưa phù hợp với mong muốn của bạn! 🙇‍♂️
+
+Bạn có thể chia sẻ cụ thể hơn về nhu cầu của bạn (Ví dụ: bạn đang muốn **Lập bản tường trình hư hỏng máy móc/thiết bị**, **Soạn công văn**, hay **Hỏi một điều luật cụ thể**) để mình điều chỉnh và hỗ trợ bạn chuẩn xác nhất nhé!"
+
+Nếu bạn muốn tạo văn bản, bạn cũng có thể bấm trực tiếp vào nút **[Mở Trình Soạn Thảo Văn Bản (RAG Studio)]** ở góc dưới màn hình!"""
+
         elif any(g in msg_norm for g in ["HELLO", "HI", "CHÀO BẠN", "CHAO BAN", "XIN CHÀO", "XIN CHAO", "CHÀO", "XINH CAHO", "CHAO"]):
             dynamic_guidance = """Chào bạn! Rất vui được hỗ trợ bạn 👋
 
@@ -226,28 +233,46 @@ Mình là **Trợ lý AI Tra cứu RAG & Đồ thị Tri thức Nghị định 3
 
 Bạn đang cần hỗ trợ loại văn bản nào hoặc có thắc mắc pháp lý nào hôm nay không ạ?"""
 
-        # Check if the query is conversational/greeting/article-lookup/catalog
-        is_direct_chat = (
-            doc_type in ["DANH SÁCH VĂN BẢN", "ĐIỀU 7 NĐ 30", "ĐIỀU 8 NĐ 30", "ĐIỀU 9 NĐ 30", "ĐIỀU 13 NĐ 30"]
-            or any(g in msg_norm for g in ["HELLO", "HI", "CHÀO BẠN", "CHAO BAN", "XIN CHÀO", "XIN CHAO", "CHÀO", "XINH CAHO", "CHAO"])
-            or any(k in msg_norm for k in ["KIEM TRA", "GIUONG NHAU", "GIONG NHAU", "HOAT DONG"])
-        )
+        # Dynamic LLM Response Generation via Ollama (Qwen3:8b) + RAG Context
+        chunks = retrieval.get("chunks", [])
+        chunk_snippets = []
+        for c in chunks[:3]:
+            art = str(c.get("title") or f"Điều {c.get('article', '')}")
+            text = str(c.get("text", "")).strip()
+            if text:
+                chunk_snippets.append(f"📌 {art}:\n{text[:350]}")
+        chunks_text = "\n\n".join(chunk_snippets) if chunk_snippets else "Không có trích đoạn cụ thể."
 
-        if is_direct_chat:
-            full_answer = f"""🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**
+        llm_prompt = f"""Bạn là Trợ lý AI Tra cứu RAG & Đồ thị Tri thức Nghị định 30/2020/NĐ-CP (Công tác văn thư) của Chính phủ Việt Nam.
+Hãy phản hồi câu hỏi của người dùng một cách tự nhiên, thân thiện, chính xác và chuyên nghiệp.
 
-{dynamic_guidance}"""
-        else:
-            full_answer = f"""🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**
-
-{dynamic_guidance}
-
----
-
-📋 **CÁC YÊU CẦU THỂ THỨC BẮT BUỘC (NGHỊ ĐỊNH 30/2020/NĐ-CP - {cites_formatted}):**
+DỮ LIỆU RAG & ĐỒ THỊ TRI THỨC (TRÍCH XUẤT NGHỊ ĐỊNH 30/2020/NĐ-CP):
+- Loại văn bản nhận diện: {doc_type}
+- Trích dẫn điều luật: {cites_formatted}
+- Điều kiện thể thức bắt buộc:
 {conds_formatted}
 
-Bạn có thể nhấn vào nút **[Mở Trình Soạn Thảo Văn Bản (RAG Studio)]** bên dưới để tự động khởi tạo file Word (.docx) chuẩn nhất!"""
+NỘI DUNG VĂN BẢN GỐC TRÍCH XUẤT TỪ VECTOR STORE 76 TRANG NĐ 30:
+{chunks_text}
+
+CÂU HỎI / Ý KIẾN CỦA NGƯỜI DÙNG:
+"{req.message}"
+
+YÊU CẦU PHẢN HỒI:
+1. Trả lời trực tiếp và tự nhiên bằng tiếng Việt theo đúng ngữ cảnh câu hỏi của người dùng.
+2. Tuyệt đối KHÔNG lặp lại các khung mẫu cứng hoặc template cố định nếu không cần thiết.
+3. Nếu câu hỏi liên quan đến tạo/soạn thảo văn bản, hãy gợi ý người dùng có thể nhấn nút **[Mở Trình Soạn Thảo Văn Bản (RAG Studio)]** bên dưới để khởi tạo file Word (.docx) chuẩn.
+"""
+        import re
+        try:
+            llm_response = generator.llm.complete(llm_prompt, max_tokens=1024)
+            llm_response = re.sub(r'<think>.*?</think>', '', llm_response, flags=re.DOTALL).strip()
+            if llm_response:
+                full_answer = llm_response
+            else:
+                full_answer = f"🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**\n\n{dynamic_guidance}"
+        except Exception:
+            full_answer = f"🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**\n\n{dynamic_guidance}"
 
         return {
             "answer": full_answer.strip(),

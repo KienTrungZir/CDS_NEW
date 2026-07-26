@@ -179,8 +179,8 @@ class ND30KnowledgeGraph:
             "sự cố", "su co",
             "bản tường", "ban tuong",
             "trình bày sự việc", "trinh bay su viec",
-            "lam hu", "làm hư", "làm mất", "lam mat", "hư xe", "nga xe",
-            "xin tường", "xin tuong", "vi phạm", "vi pham", "thiệt hại", "thiet hai",
+            "lam hu", "làm hư", "làm mất", "lam mat", "hư xe", "nga xe", "hư máy", "hu may", "hỏng máy", "hong may", "máy giặt", "may giat", "may gio",
+            "xin tường", "xin tuong", "vi phạm", "vi pham", "thiệt hại", "thiet hai", "thie ati", "thie hai", "thiệt hại máy", "thiet hai may",
             "giờ phải làm sao", "gio phai lam sao", "phải làm sao", "phai lam sao", "xử lý sao", "xu ly sao"
         ]
         if any(kw in t or kw in tn for kw in tuong_trinh_kw):
