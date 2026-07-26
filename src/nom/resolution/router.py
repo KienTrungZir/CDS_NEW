@@ -226,10 +226,19 @@ Mình là **Trợ lý AI Tra cứu RAG & Đồ thị Tri thức Nghị định 3
 
 Bạn đang cần hỗ trợ loại văn bản nào hoặc có thắc mắc pháp lý nào hôm nay không ạ?"""
 
-        else:
-            dynamic_guidance = guidance
+        # Check if the query is conversational/greeting/article-lookup/catalog
+        is_direct_chat = (
+            doc_type in ["DANH SÁCH VĂN BẢN", "ĐIỀU 7 NĐ 30", "ĐIỀU 8 NĐ 30", "ĐIỀU 9 NĐ 30", "ĐIỀU 13 NĐ 30"]
+            or any(g in msg_norm for g in ["HELLO", "HI", "CHÀO BẠN", "CHAO BAN", "XIN CHÀO", "XIN CHAO", "CHÀO", "XINH CAHO", "CHAO"])
+            or any(k in msg_norm for k in ["KIEM TRA", "GIUONG NHAU", "GIONG NHAU", "HOAT DONG"])
+        )
 
-        full_answer = f"""🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**
+        if is_direct_chat:
+            full_answer = f"""🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**
+
+{dynamic_guidance}"""
+        else:
+            full_answer = f"""🤖 **LỜI KHUYÊN & HƯỚNG DẪN RIÊNG TỪ TRỢ LÝ AI:**
 
 {dynamic_guidance}
 
@@ -237,13 +246,6 @@ Bạn đang cần hỗ trợ loại văn bản nào hoặc có thắc mắc phá
 
 📋 **CÁC YÊU CẦU THỂ THỨC BẮT BUỘC (NGHỊ ĐỊNH 30/2020/NĐ-CP - {cites_formatted}):**
 {conds_formatted}
-
-📐 **KỸ THUẬT TRÌNH BÀY & QUY CHUẨN:**
-  • Khổ giấy: A4 (210 x 297 mm), phông chữ Times New Roman (TCVN 6909:2001), màu đen.
-  • Định lề trang: Lề trên/dưới 20 - 25 mm, lề trái 30 - 35 mm, lề phải 15 - 20 mm.
-  • Số trang đặt ở giữa lề trên văn bản (đánh từ số 1, không hiển thị trang 1).
-  • Chữ ký người làm đơn / người có thẩm quyền dùng **MỰC MÀU XANH**.
-  • Dấu cơ quan đóng trùm lên 1/3 chữ ký về phía bên trái.
 
 Bạn có thể nhấn vào nút **[Mở Trình Soạn Thảo Văn Bản (RAG Studio)]** bên dưới để tự động khởi tạo file Word (.docx) chuẩn nhất!"""
 
